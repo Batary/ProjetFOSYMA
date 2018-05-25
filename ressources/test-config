@@ -1,0 +1,6 @@
+mapname:test
+agentCollect:AgentCollector1:5:10:0
+agentCollect:AgentCollector2:6:0:10
+agentTanker:AgentTanker1:4:-1:-1
+treasure:0:11
+diamonds:17:150
