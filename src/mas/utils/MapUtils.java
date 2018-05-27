@@ -12,7 +12,7 @@ import mas.exceptions.PathBlockedException;
 public class MapUtils {
 
 	private static Map<String, List<Integer>> getNodesToAvoid(String start, HashMap<String, NodeInfo> map, HashMap<String, AgentInfo> agents, int time,
-			String caller) {
+			String caller, boolean ignorePriority) {
 		Map<String, List<Integer>> nodesToAvoid = new HashMap<>();
 
 		// get nodes where other agents are going
@@ -22,22 +22,24 @@ public class MapUtils {
 			if (!key.equals(caller)) {
 
 				if (value.lastUpdate >= System.currentTimeMillis() - 10 * time
-						&& ((agents.get(caller).priority < value.priority || caller.compareTo(key) > 0) /*static priority*/)) {
+						&& (ignorePriority || (agents.get(caller).priority < value.priority || caller.compareTo(key) > 0) /*static priority*/)) {
 					int step = (int) ((System.currentTimeMillis() - value.lastUpdate) / time); // rounds since last update
-					for (int i = step; i < value.path.size(); i++) {
-						if (!nodesToAvoid.containsKey(value.path.get(i))) {
-							nodesToAvoid.put(value.path.get(i), new ArrayList<Integer>());
+					if (value.path != null) {
+						for (int i = step; i < value.path.size(); i++) {
+							if (!nodesToAvoid.containsKey(value.path.get(i))) {
+								nodesToAvoid.put(value.path.get(i), new ArrayList<Integer>());
+							}
+							// here we assume path of this agent will not be blocked and has the same time step as caller
+							// nodesToAvoid.get(value.path.get(i)).add(i - step);
+							nodesToAvoid.get(value.path.get(i)).add(i - step + 1);
+							// System.out.println(caller + " : avoid node " + value.path.get(i) + " on step " + nodesToAvoid.get(value.path.get(i)));
 						}
-						// here we assume path of this agent will not be blocked and has the same time step as caller
-						nodesToAvoid.get(value.path.get(i)).add(i - step);
-						nodesToAvoid.get(value.path.get(i)).add(i - step + 1);
-						// System.out.println(caller + " : avoid node " + value.path.get(i) + " on step " + nodesToAvoid.get(value.path.get(i)));
 					}
 				}
 
 				// prevent path from returning current position of another agent trying to go to our location
 				if (value.lastUpdate >= System.currentTimeMillis() - 2 * time) {
-					if (value.stuckCounter > 0 || value.path.isEmpty() || value.path.get(0).equals(start)) {
+					if (value.stuckCounter > 0 || value.path == null || value.path.isEmpty() || value.path.get(0).equals(start)) {
 						if (!nodesToAvoid.containsKey(value.position)) {
 							nodesToAvoid.put(value.position, new ArrayList<Integer>());
 						}
@@ -77,7 +79,7 @@ public class MapUtils {
 		List<String> nodesToVisitNames = new ArrayList<>();
 
 		// defines a list of steps where this agent should avoid some nodes
-		Map<String, List<Integer>> nodesToAvoid = getNodesToAvoid(start, map, agents, time, caller);
+		Map<String, List<Integer>> nodesToAvoid = getNodesToAvoid(start, map, agents, time, caller, false);
 		List<String> blockedNodes = new ArrayList<>();
 
 		// TODO save blocking agent's names to throw ?
@@ -85,12 +87,11 @@ public class MapUtils {
 		nodesToVisit.put(start, currentNode);
 		nodesToVisitNames.add(start);
 
-		System.out.println("MapUtils.getPath() dest : " + dest + " nodestovisit : " + nodesToVisit);
-
 		while (!currentNode.position.equals(dest) && !nodesToVisit.isEmpty()) {
 			visitedNodes.put(currentNode.position, currentNode);
 			nodesToVisit.remove(currentNode.position);
-			nodesToVisitNames.remove(currentNode.position);
+			final String pos = currentNode.position;
+			nodesToVisitNames.removeIf(a -> a.equals(pos));
 
 			// browse neighbours
 			boolean blocked = false;
@@ -102,7 +103,7 @@ public class MapUtils {
 						// System.out.println(nodesToVisit.get(n).connectedNodes.toString());
 						nodesToVisitNames.add(n);
 					} else {
-						if (!blockedNodes.contains(n)) {
+						if (!blockedNodes.contains(n) && !n.equals(start)) {
 							blockedNodes.add(n);
 
 							visitedNodes.remove(currentNode.position);
@@ -119,12 +120,16 @@ public class MapUtils {
 			}
 			if (blocked) {
 				// try to get by, by waiting a little
-				nodesToVisit.get(currentNode.position).distance += 1;
+				// TODO if not on startnode ?
+				// nodesToVisit.get(currentNode.position).distance += 1;
 			}
 
 			if (nodesToVisit.isEmpty()) {
 				break;
 			} else {
+				if (nodesToVisit.get(nodesToVisitNames.get(0)) == null) {
+					System.out.println(currentNode.position);
+				}
 				currentNode = nodesToVisit.get(nodesToVisitNames.get(0));
 			}
 		}
@@ -173,9 +178,11 @@ public class MapUtils {
 					if (path.contains(value.position)) {
 						return false;
 					}
-					for (int i = step; i < value.path.size(); i++) {
-						if (path.contains(value.path.get(i))) {
-							return false;
+					if (value.path != null) {
+						for (int i = step; i < value.path.size(); i++) {
+							if (path.contains(value.path.get(i))) {
+								return false;
+							}
 						}
 					}
 				}
@@ -248,21 +255,23 @@ public class MapUtils {
 
 						// get current position of agent
 						int step = (int) (System.currentTimeMillis() - value.lastUpdate) / time + currentNode.distance; // rounds since last update
-						if (step < value.path.size() + currentNode.distance + 4) {
-							if (step >= value.path.size()) {
-								step = value.path.size() - 1;
-							}
-							int distance = currentNode.distance + 1;
-							try {
-								if (value.path.get(step).equals(node)) {
-									distance = 0;
-								} else {
-									distance = MapUtils.getPath(value.path.get(step), node, map, agents, time, key).size();
+						if (value.path != null) {
+							if (step < value.path.size() + currentNode.distance + 4) {
+								if (step >= value.path.size()) {
+									step = value.path.size() - 1;
 								}
-							} catch (Exception e) {
-							}
-							if (currentNode.distance >= distance) {
-								currentNode.distance += currentNode.distance - distance + 1;
+								int distance = currentNode.distance + 1;
+								try {
+									if (value.path.get(step).equals(node)) {
+										distance = 0;
+									} else {
+										distance = MapUtils.getPath(value.path.get(step), node, map, agents, time, key).size();
+									}
+								} catch (Exception e) {
+								}
+								if (currentNode.distance >= distance) {
+									currentNode.distance += currentNode.distance - distance + 1;
+								}
 							}
 						}
 					}
@@ -298,7 +307,7 @@ public class MapUtils {
 		List<String> nodesToVisitNames = new ArrayList<>();
 
 		// defines a list of steps where this agent should avoid some nodes
-		Map<String, List<Integer>> nodesToAvoid = getNodesToAvoid(start, map, agents, time, caller);
+		Map<String, List<Integer>> nodesToAvoid = getNodesToAvoid(start, map, agents, time, caller, true);
 		List<String> blockedNodes = new ArrayList<>();
 
 		nodesToVisit.put(start, currentNode);
@@ -354,7 +363,7 @@ public class MapUtils {
 	/** @return true if node does not block path */
 	public static boolean isFreeNode(String node, HashMap<String, NodeInfo> map, HashMap<String, AgentInfo> agents, int time, String caller) {
 
-		if (isTreasure(node, map)) {
+		if (isTreasureOrDiamonds(node, map)) {
 			return false;
 		}
 
@@ -369,10 +378,12 @@ public class MapUtils {
 				if (value.lastUpdate >= System.currentTimeMillis() - 10 * time
 						&& ((agents.get(caller).priority < value.priority || caller.compareTo(key) > 0) /*static priority*/)) {
 					int step = (int) ((System.currentTimeMillis() - value.lastUpdate) / time); // rounds since last update
-					for (int i = step; i < value.path.size(); i++) {
+					if (value.path != null) {
+						for (int i = step; i < value.path.size(); i++) {
 
-						if (value.path.contains(node)) {
-							return false;
+							if (value.path.contains(node)) {
+								return false;
+							}
 						}
 					}
 				}
@@ -440,7 +451,7 @@ public class MapUtils {
 		List<String> nodesToVisitNames = new ArrayList<>();
 
 		// defines a list of steps where this agent should avoid some nodes
-		Map<String, List<Integer>> nodesToAvoid = getNodesToAvoid(start, map, agents, time, caller);
+		Map<String, List<Integer>> nodesToAvoid = getNodesToAvoid(start, map, agents, time, caller, true);
 		List<String> blockedNodes = new ArrayList<>();
 
 		nodesToVisit.put(start, currentNode);
@@ -498,15 +509,14 @@ public class MapUtils {
 		}
 	}
 
-	public static boolean isTreasure(String node, HashMap<String, NodeInfo> map) {
+	public static boolean isTreasureOrDiamonds(String node, HashMap<String, NodeInfo> map) {
 		if (map.get(node).nodeContent != null) {
 			for (Attribute a : map.get(node).nodeContent) {
-				if (a == Attribute.TREASURE) {
+				if (a == Attribute.TREASURE || a == Attribute.DIAMONDS) {
 					return true;
 				}
 			}
 		}
-
 		return false;
 	}
 

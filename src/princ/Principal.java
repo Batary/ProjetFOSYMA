@@ -178,7 +178,7 @@ public class Principal {
 		//agentExplo:AgentExplorer3:4:-1:-1
 		agentName = "AgentExplorer1";
 		try {
-		
+
 			Object[] objtab = new Object[] { env, EntityType.AGENT_EXPLORER };// used to give informations to the agent
 			AgentController ag = c.createNewAgent(agentName, ExplorerAgent.class.getName(), objtab);
 			agentList.add(ag);
@@ -186,10 +186,10 @@ public class Principal {
 		} catch (StaleProxyException e) {
 			e.printStackTrace();
 		}
-		
+
 		agentName = "AgentExplorer2";
 		try {
-		
+
 			Object[] objtab = new Object[] { env, EntityType.AGENT_EXPLORER };// used to give informations to the agent
 			AgentController ag = c.createNewAgent(agentName, ExplorerAgent.class.getName(), objtab);
 			agentList.add(ag);

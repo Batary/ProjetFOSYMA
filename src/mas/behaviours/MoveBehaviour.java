@@ -11,6 +11,7 @@ import jade.core.behaviours.TickerBehaviour;
 import mas.agents.CustomAgent;
 import mas.utils.AgentInfo;
 import mas.utils.NodeInfo;
+import mas.utils.TreasureInfo;
 
 
 /** This behaviour is used to make basic movement with simple monitoring from a parent behaviour. */
@@ -35,6 +36,8 @@ public class MoveBehaviour extends TickerBehaviour {
 		// Example to retrieve the current position
 		String myPosition = ((mas.abstractAgent) this.myAgent).getCurrentPosition();
 		HashMap<String, AgentInfo> agents = ((CustomAgent) this.myAgent).agents;
+		HashMap<String, NodeInfo> map = ((CustomAgent) (this.myAgent)).map;
+		HashMap<String, TreasureInfo> treasures = ((CustomAgent) this.myAgent).treasures;
 
 		if (myPosition != "") {
 
@@ -51,9 +54,13 @@ public class MoveBehaviour extends TickerBehaviour {
 			if (agInfo.isStuck()) {
 				this.myAgent.removeBehaviour(callerBehaviour);
 				String dest = (agInfo.path.isEmpty() ? "" : agInfo.path.get(agInfo.path.size() - 1));
+				agInfo.stuckCounter = 3;
+				agents.put(myAgentName, agInfo);
 				myAgent.addBehaviour(new UnstuckBehaviour(myAgent, agInfo.goal, dest));
 				this.stop();
+				return;
 			}
+
 
 			// List of observable from the agent's current position
 			List<Couple<String, List<Attribute>>> lobs = ((mas.abstractAgent) this.myAgent).observe();// myPosition
@@ -71,85 +78,64 @@ public class MoveBehaviour extends TickerBehaviour {
 			// list of attribute associated to the currentPosition
 			List<Attribute> lattribute = lobs.get(0).getRight();
 
-			HashMap<String, NodeInfo> map = ((CustomAgent) (this.myAgent)).map;
 			List<String> connected = new ArrayList<>(lobs.size() - 1);
+
 			// create nodes and add them to the map
-			lobs.forEach(a -> {
+			for (Couple<String, List<Attribute>> a : lobs) {
 				connected.add(a.getLeft());
 				if (!map.containsKey(a.getLeft())) {
 					map.put(a.getLeft(), new NodeInfo(a.getLeft(), lobs.get(0).getLeft()));
-				} else if (map.get(a.getLeft()).lastUpdate == 0 && !map.get(a.getLeft()).connectedNodes.contains(a.getLeft())) {
-					map.get(a.getLeft()).connectedNodes.add(a.getLeft());
-					// TODO check treasure on side nodes ?
+				} else if (map.get(a.getLeft()).lastUpdate == 0) {
+					if (!map.get(a.getLeft()).connectedNodes.contains(myPosition)) {
+						map.get(a.getLeft()).connectedNodes.add(myPosition);
+					}
+
 				}
-			});
+			}
 			connected.remove(0);
+			boolean newNode = map.get(myPosition).lastUpdate == 0;
 
 			map.put(lobs.get(0).getLeft(), new NodeInfo(lobs.get(0).getRight(), lobs.get(0).getLeft(), connected));
 
 			// System.out.println(map);
 
 			// example related to the use of the backpack for the treasure hunt
-			Boolean b = false;
+			String b = "";
 
 			for (Attribute a : lattribute) {
 				switch (a) {
 				case TREASURE:
-
-					// System.out.println("My type is : "+((mas.abstractAgent)this.myAgent).getMyTreasureType());
-					// System.out.println("My current backpack capacity is:"+ ((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
-					// System.out.println("Value of the treasure on the current position: "+a.getValue());
-					// System.out.println("The agent grabbed :"+((mas.abstractAgent)this.myAgent).pick());
-					// System.out.println("the remaining backpack capacity is: "+ ((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
-
 					System.out.println(myAgentName + " : the value of treasure on the current position is : " + a.getValue());
-					b = true;
-					// Little pause to allow you to follow what is going on
-					// try {
-					// System.out.println("Press Enter in the console to allow the agent "+myAgentName +" to execute its next move");
-					// System.in.read();
-					// } catch (IOException e) {
-					// e.printStackTrace();
-					// }
+					b = a.getName();
 					break;
 				case DIAMONDS:
-					// System.out.println("My type is : "+((mas.abstractAgent)this.myAgent).getMyTreasureType());
-					// System.out.println("My current backpack capacity is:"+ ((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
-					// System.out.println("Value of the diamonds on the current position: "+a.getValue());
-					// System.out.println("The agent grabbed :"+((mas.abstractAgent)this.myAgent).pick());
-					// System.out.println("the remaining backpack capacity is: "+ ((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
-
 					System.out.println(myAgentName + " : the value of diamonds on the current position is : " + a.getValue());
-					b = true;
-					// Little pause to allow you to follow what is going on
-					// try {
-					// System.out.println("Press Enter in the console to allow the agent "+myAgentName +" to execute its next move");
-					// System.in.read();
-					// } catch (IOException e) {
-					// e.printStackTrace();
-					// }
+					b = a.getName();
 				default:
 					break;
 				}
 			}
 
 			// If the agent picked (part of) the treasure
-			if (((mas.abstractAgent) this.myAgent).getBackPackFreeSpace() > 0 && b) {
+			if (((mas.abstractAgent) this.myAgent).getBackPackFreeSpace() > 0 && !b.equals("")
+					&& ((mas.abstractAgent) this.myAgent).getMyTreasureType().equals(b)) {
 				int g = ((mas.abstractAgent) this.myAgent).pick();
 				if (g > 0) {
 					List<Couple<String, List<Attribute>>> lobs2 = ((mas.abstractAgent) this.myAgent).observe();// myPosition
-					System.out.println("list of observables after picking " + lobs2);
+					System.out.println(myAgentName + " : list of observables after picking " + lobs2);
 
-					System.out.println("The agent grabbed :" + g);
+					System.out.println(myAgentName + " : The agent grabbed :" + g);
 
-					System.out.println("My current backpack capacity is:" + ((mas.abstractAgent) this.myAgent).getBackPackFreeSpace());
-					System.out.println("The agent tries to transfer is load into the Silo (if reachable); succes ? : "
+					System.out.println(myAgentName + " : My current backpack capacity is:" + ((mas.abstractAgent) this.myAgent).getBackPackFreeSpace());
+					System.out.println(myAgentName + " : The agent tries to transfer is load into the Silo (if reachable); succes ? : "
 							+ ((mas.abstractAgent) this.myAgent).emptyMyBackPack("AgentTanker1"));
-					System.out.println("My current backpack capacity is:" + ((mas.abstractAgent) this.myAgent).getBackPackFreeSpace());
+					System.out.println(myAgentName + " : My current backpack capacity is:" + ((mas.abstractAgent) this.myAgent).getBackPackFreeSpace());
 				}
+			}
 
-				// TODO wake up behaviour if new treasure was found
-
+			// wake up behaviour if new treasure was found
+			if (newNode && !b.equals("")) {
+				awakeParent();
 			}
 
 			String nextNode = "";

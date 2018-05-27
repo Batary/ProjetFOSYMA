@@ -11,6 +11,7 @@ import jade.core.Agent;
 import jade.core.behaviours.TickerBehaviour;
 import mas.abstractAgent;
 import mas.agents.CustomAgent;
+import mas.exceptions.PathBlockedException;
 import mas.utils.AgentInfo;
 import mas.utils.GoalType;
 import mas.utils.MapUtils;
@@ -35,6 +36,9 @@ public class UnstuckBehaviour extends TickerBehaviour {
 	private GoalType previousGoal;
 	private String target;
 
+	private int tick = 0;
+	private int checkCounter = 10;
+
 	public UnstuckBehaviour(Agent a, GoalType goal, String targetNode) {
 		super(a,((CustomAgent)a).agentBlockingTime);
 		this.previousGoal = goal;
@@ -43,6 +47,7 @@ public class UnstuckBehaviour extends TickerBehaviour {
 
 	@Override
 	public void onTick() {
+		tick++;
 
 		HashMap<String, NodeInfo> map = ((CustomAgent) this.myAgent).map;
 		HashMap<String, AgentInfo> agents = ((CustomAgent) this.myAgent).agents;
@@ -73,29 +78,74 @@ public class UnstuckBehaviour extends TickerBehaviour {
 
 		map.put(lobs.get(0).getLeft(), new NodeInfo(lobs.get(0).getRight(), lobs.get(0).getLeft(), connected));
 
-		if (target.equals(myPosition) || checkGoal(map, agents, ((CustomAgent) this.myAgent).agentBlockingTime)) {
+		int time = ((CustomAgent) this.myAgent).agentBlockingTime;
+		if (target.equals(myPosition) || checkGoal(map, agents, time)) {
 			// not stuck anymore !
 			agInfo.position = myPosition;
 			agInfo.update();
 
+			System.out.println(this.myAgent.getLocalName() + " is no longer stuck.");
 			agents.put(myAgentName, agInfo);
 			switchBehaviour();
+			return;
+		}
+
+		// (last resort) : move randomly
+		Random r = new Random();
+		int moveId = r.nextInt(lobs.size() - 1) + 1;
+		String dest = lobs.get(moveId).getLeft();
+
+		if(agInfo.path != null && agInfo.path.size() > 0) {
+			dest = agInfo.path.get(0);
 		}
 		else {
 
-			// last resort : move randomly
+			agInfo.path = new ArrayList<>();
+			agInfo.path.add(dest);
 
+			// try to reach unused node
+			if ((agInfo.stuckCounter <= 5 && tick < 10) || tick % checkCounter / 1.5 == 0) {
 
-			//Random move from the current position
-			Random r= new Random();
-			int moveId = r.nextInt(lobs.size() - 1) + 1;
+				agInfo.path = MapUtils.getUnusedNodePath(myPosition, map, agents, time, myAgentName);
+				if (agInfo.path != null) {
+					dest = agInfo.path.get(0);
+				}
+				else {
+					agInfo.path = new ArrayList<>();
+					agInfo.path.add(dest);
+				}
 
-			if(!((mas.abstractAgent)this.myAgent).moveTo(lobs.get(moveId).getLeft()) && moveId != 0) {
-				//could not move to node
-				System.out.println(this.myAgent.getLocalName() + "[stuck] : could not make movement : " + myPosition + " --> " + lobs.get(moveId).getLeft());
+			}
+
+			// try to go back to destination
+			if (((agInfo.stuckCounter > 5 && agInfo.stuckCounter < 7) || tick % checkCounter == 0) && target != null && target != "") {
+				checkCounter += 1 + checkCounter / 10;
+				try {
+					agInfo.path = MapUtils.getPath(myPosition, target, map, agents, time, myAgentName);
+					dest = agInfo.path.get(0);
+				} catch (PathBlockedException e) {
+					System.out.println(this.myAgent.getLocalName() + " : path to node " + target + " is still blocked.");
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 		}
+
+
+		if (!((mas.abstractAgent) this.myAgent).moveTo(dest)) {
+			agInfo.stuckCounter++;
+			agInfo.path.clear();
+			//could not move to node
+			System.out.println(this.myAgent.getLocalName() + "[stuck:" + agInfo.stuckCounter + "] : could not make movement : " + myPosition + " --> "
+					+ dest);
+		}
+		else {
+			agInfo.path.remove(0);
+		}
+		agInfo.update();
+		((CustomAgent) myAgent).agents.put(myAgentName, agInfo);
 	}
+
 
 	private void switchBehaviour() {
 		switch (previousGoal) {
@@ -129,7 +179,10 @@ public class UnstuckBehaviour extends TickerBehaviour {
 
 			break;
 		case waitForInput:
-			if (MapUtils.isFreeNode(((mas.abstractAgent) this.myAgent).getCurrentPosition(), map, agents, time, myAgent.getLocalName())) {
+			if (MapUtils.isFreeNode(((mas.abstractAgent) this.myAgent).getCurrentPosition(), map, agents, time, myAgent.getLocalName())
+					|| MapUtils.checkPath(
+							MapUtils.getFreeNodePath(((mas.abstractAgent) this.myAgent).getCurrentPosition(), map, agents, time, myAgent.getLocalName()),
+							map, agents, time, myAgent.getLocalName())) {
 				reached = true;
 			}
 			break;

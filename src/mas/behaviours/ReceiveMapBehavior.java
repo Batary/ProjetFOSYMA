@@ -13,6 +13,7 @@ import mas.utils.AgentInfo;
 import mas.utils.MessageInformation;
 import mas.utils.NodeInfo;
 import mas.utils.Serialiser;
+import mas.utils.TreasureInfo;
 
 public class ReceiveMapBehavior extends SimpleBehaviour {
 
@@ -41,25 +42,42 @@ public class ReceiveMapBehavior extends SimpleBehaviour {
 				HashMap<String, NodeInfo> newMap = inf.map;
 				HashMap<String, NodeInfo> myMap = ((CustomAgent)(this.myAgent)).map;
 				HashMap<String, AgentInfo> agents = ((CustomAgent)this.myAgent).agents;
+				HashMap<String, TreasureInfo> treasures = ((CustomAgent) this.myAgent).treasures;
 
+				// browse treasures
+				for (Entry<String, TreasureInfo> entry : inf.treasures.entrySet()) {
+					String key = entry.getKey();
+					TreasureInfo value = entry.getValue();
+					if (treasures.containsKey(key)) {
+						treasures.get(key).merge(value);
+					} else {
+						treasures.put(key, value);
+					}
+				}
+				// TODO ? remove empty treasures
+
+				// browse agents
 				for (Entry<String, AgentInfo> entry : inf.agents.entrySet()) {
 					String key = entry.getKey();
 					AgentInfo value = entry.getValue();
 					if(agents.containsKey(key)) {
 						if(agents.get(key).lastUpdate < value.lastUpdate) {
 							agents.put(key, value);
-							// agents.get(key).update();
 						}
 					}
 					else {
 						agents.put(key, value);
-						// agents.get(key).update();
 					}
-
-
 				}
 
-				//List<String> updated = new ArrayList<String>();
+				// update reference node
+				if (agents.get(msg.getSender().getLocalName()).reference != null && (agents.get(myAgent.getLocalName()).reference == null
+						|| agents.get(msg.getSender().getLocalName()).reference.compareTo(agents.get(myAgent.getLocalName()).reference) < 0))
+				{
+					agents.get(msg.getSender().getLocalName()).reference = agents.get(myAgent.getLocalName()).reference;
+				}
+
+				// browse map
 				for (Map.Entry<String, NodeInfo> entry : newMap.entrySet()) {
 					String key = entry.getKey();
 					NodeInfo value = entry.getValue();
@@ -72,6 +90,7 @@ public class ReceiveMapBehavior extends SimpleBehaviour {
 					}
 				}
 				//				if(!updated.isEmpty()) System.out.println(this.myAgent.getLocalName()+" : received update on : " + updated);
+
 
 			} catch (ClassNotFoundException e) {
 				e.printStackTrace();

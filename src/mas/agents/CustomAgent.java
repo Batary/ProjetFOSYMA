@@ -6,6 +6,7 @@ import env.EntityType;
 import mas.abstractAgent;
 import mas.utils.AgentInfo;
 import mas.utils.NodeInfo;
+import mas.utils.TreasureInfo;
 
 public abstract class CustomAgent extends abstractAgent {
 
@@ -17,6 +18,7 @@ public abstract class CustomAgent extends abstractAgent {
 
 	public HashMap<String, NodeInfo> map;
 	public HashMap<String, AgentInfo> agents;
+	public HashMap<String, TreasureInfo> treasures;
 	//public List<String> path;
 
 
@@ -25,6 +27,7 @@ public abstract class CustomAgent extends abstractAgent {
 		this.type = type;
 		map = new HashMap<>();
 		agents = new HashMap<>();
+		treasures = new HashMap<>();
 		//path = new ArrayList<>();
 	}
 

@@ -16,6 +16,7 @@ import mas.utils.AgentInfo;
 import mas.utils.MessageInformation;
 import mas.utils.NodeInfo;
 import mas.utils.Serialiser;
+import mas.utils.TreasureInfo;
 
 
 /** Share map with other agents */
@@ -43,6 +44,7 @@ public class SendMapBehaviour extends TickerBehaviour{
 		ticks++;
 		HashMap<String, NodeInfo> map = ((CustomAgent)this.myAgent).map;
 		HashMap<String, AgentInfo> agents = ((CustomAgent)this.myAgent).agents;
+		HashMap<String, TreasureInfo> treasures = ((CustomAgent) this.myAgent).treasures;
 
 		//get nearby agents
 		DFAgentDescription dfd = new DFAgentDescription();
@@ -74,7 +76,7 @@ public class SendMapBehaviour extends TickerBehaviour{
 					//serialize map and send it
 
 					try {
-						String content = Serialiser.convertToString(new MessageInformation(map, agents));
+						String content = Serialiser.convertToString(new MessageInformation(map, agents, treasures));
 						//						System.out.println(content);
 						msg.setContent(content);
 						((abstractAgent)(this.myAgent)).sendMessage(msg);
