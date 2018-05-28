@@ -74,7 +74,7 @@ public class ReceiveMapBehavior extends SimpleBehaviour {
 				if (agents.get(msg.getSender().getLocalName()).reference != null && (agents.get(myAgent.getLocalName()).reference == null
 						|| agents.get(msg.getSender().getLocalName()).reference.compareTo(agents.get(myAgent.getLocalName()).reference) < 0))
 				{
-					agents.get(msg.getSender().getLocalName()).reference = agents.get(myAgent.getLocalName()).reference;
+					agents.get(myAgent.getLocalName()).reference = agents.get(msg.getSender().getLocalName()).reference;
 				}
 
 				// browse map

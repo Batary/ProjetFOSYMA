@@ -442,7 +442,7 @@ public class MapUtils {
 
 		NodeInfo startNode = map.get(start);
 		if (startNode == null) {
-			System.err.println("getFreeNodePath : start should not be null !");
+			System.err.println("getUnusedNodePath : start should not be null !");
 			return null;
 		}
 		PathNode currentNode = new PathNode(startNode, null, 0, false, null);
@@ -528,6 +528,76 @@ public class MapUtils {
 	public static List<NodeInfo> getWumpusNodes(HashMap<String, NodeInfo> map) {
 		// TODO
 		return null;
+	}
+
+	/** @return path to an old, reachable node */
+	public static List<String> getOldestNodePath(String start, HashMap<String, NodeInfo> map, HashMap<String, AgentInfo> agents, int time, String caller) {
+
+		NodeInfo startNode = map.get(start);
+		if (startNode == null) {
+			System.err.println("getOldestNodePath : start should not be null !");
+			return null;
+		}
+		PathNode currentNode = new PathNode(startNode, null, 0, false, null);
+		PathNode oldestNode = currentNode;
+
+		Map<String, PathNode> visitedNodes = new HashMap<>();
+		Map<String, PathNode> nodesToVisit = new HashMap<>();
+		List<String> nodesToVisitNames = new ArrayList<>();
+
+		// defines a list of steps where this agent should avoid some nodes
+		Map<String, List<Integer>> nodesToAvoid = getNodesToAvoid(start, map, agents, time, caller, true);
+		List<String> blockedNodes = new ArrayList<>();
+
+		nodesToVisit.put(start, currentNode);
+		nodesToVisitNames.add(start);
+
+		while (!nodesToVisit.isEmpty()) {
+			visitedNodes.put(currentNode.position, currentNode);
+			nodesToVisit.remove(currentNode.position);
+			nodesToVisitNames.remove(currentNode.position);
+
+			// browse neighbours
+			for (String n : currentNode.connectedNodes) {
+				if (visitedNodes.get(n) == null && nodesToVisit.get(n) == null) {
+					// add neighbours if they have not been met yet and they are not blocked
+					if (!nodesToAvoid.containsKey(n) || !nodesToAvoid.get(n).contains(currentNode.distance + 1)) {
+						nodesToVisit.put(n, new PathNode(map.get(n), currentNode, currentNode.distance + 1, false, null));
+						nodesToVisitNames.add(n);
+
+						if (oldestNode.lastUpdate > currentNode.lastUpdate) {
+							oldestNode = currentNode;
+						}
+
+					} else {
+						if (!blockedNodes.contains(n)) {
+							blockedNodes.add(n);
+						}
+					}
+				}
+			}
+			if (nodesToVisit.isEmpty()) {
+				break;
+			} else {
+				currentNode = nodesToVisit.get(nodesToVisitNames.get(0));
+			}
+		}
+
+		if (currentNode == oldestNode) {
+
+			System.out.println(caller + " (at node " + start + ") : agent is blocked !");
+			return null;
+		} else {
+			List<String> path = new ArrayList<>(currentNode.distance + 1);
+			// System.out.println();
+			while (currentNode.previousNode != null) {
+				// System.out.print(currentNode.position + " <-- ");
+				path.add(0, currentNode.position);
+				currentNode = currentNode.previousNode;
+			}
+			// System.out.println();
+			return path;
+		}
 	}
 
 }

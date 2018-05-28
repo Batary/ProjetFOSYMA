@@ -1,6 +1,6 @@
 mapname:test
 agentCollect:AgentCollector1:8:10:-1
 agentCollect:AgentCollector2:6:-1:10
-agentTanker:AgentTanker1:7:-1:-1
+agentTanker:AgentTanker1:9:-1:-1
 treasure:20:51
 diamonds:17:150

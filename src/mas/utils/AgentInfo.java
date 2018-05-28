@@ -14,7 +14,7 @@ public class AgentInfo implements Serializable {
 	public EntityType type = null;
 	public String name;
 
-	// TODO reference to the position of a tanker agent
+	// reference to the position of a tanker agent
 	public String reference = null;
 
 	// triggers priority and stuck mechanisms

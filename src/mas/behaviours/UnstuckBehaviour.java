@@ -153,7 +153,7 @@ public class UnstuckBehaviour extends TickerBehaviour {
 			myAgent.addBehaviour(new ExploreBehaviour((abstractAgent) myAgent));
 			break;
 		case shareInformation:
-
+			myAgent.addBehaviour(new ExploreBehaviour((abstractAgent) myAgent));
 			break;
 		case waitForInput:
 			myAgent.addBehaviour(new TankerBehaviour((abstractAgent) myAgent));
@@ -176,6 +176,8 @@ public class UnstuckBehaviour extends TickerBehaviour {
 			}
 			break;
 		case shareInformation:
+
+			// TODO
 
 			break;
 		case waitForInput:

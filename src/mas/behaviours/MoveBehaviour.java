@@ -25,6 +25,9 @@ public class MoveBehaviour extends TickerBehaviour {
 	private Behaviour callerBehaviour;
 	public String destination;
 
+	// attribute for parent class to test for new treasures
+	public boolean newTreasure = false;
+
 	public MoveBehaviour(final mas.abstractAgent myagent, final Behaviour caller, String destination) {
 		super(myagent, ((CustomAgent) (myagent)).agentBlockingTime);
 		callerBehaviour = caller;
@@ -61,19 +64,8 @@ public class MoveBehaviour extends TickerBehaviour {
 				return;
 			}
 
-
 			// List of observable from the agent's current position
 			List<Couple<String, List<Attribute>>> lobs = ((mas.abstractAgent) this.myAgent).observe();// myPosition
-
-			// System.out.println(myAgentName+" -- list of observables: "+lobs);
-
-			// //Little pause to allow you to follow what is going on
-			// try {
-			// System.out.println("Press Enter in the console to allow the agent "+myAgentName +" to execute its next move");
-			// System.in.read();
-			// } catch (IOException e) {
-			// e.printStackTrace();
-			// }
 
 			// list of attribute associated to the currentPosition
 			List<Attribute> lattribute = lobs.get(0).getRight();
@@ -93,32 +85,29 @@ public class MoveBehaviour extends TickerBehaviour {
 				}
 			}
 			connected.remove(0);
-			boolean newNode = map.get(myPosition).lastUpdate == 0;
 
 			map.put(lobs.get(0).getLeft(), new NodeInfo(lobs.get(0).getRight(), lobs.get(0).getLeft(), connected));
 
-			// System.out.println(map);
-
 			// example related to the use of the backpack for the treasure hunt
-			String b = "";
+			Attribute b = null;
 
 			for (Attribute a : lattribute) {
 				switch (a) {
 				case TREASURE:
 					System.out.println(myAgentName + " : the value of treasure on the current position is : " + a.getValue());
-					b = a.getName();
+					b = a;
 					break;
 				case DIAMONDS:
 					System.out.println(myAgentName + " : the value of diamonds on the current position is : " + a.getValue());
-					b = a.getName();
+					b = a;
 				default:
 					break;
 				}
 			}
 
 			// If the agent picked (part of) the treasure
-			if (((mas.abstractAgent) this.myAgent).getBackPackFreeSpace() > 0 && !b.equals("")
-					&& ((mas.abstractAgent) this.myAgent).getMyTreasureType().equals(b)) {
+			if (((mas.abstractAgent) this.myAgent).getBackPackFreeSpace() > 0 && b != null
+					&& ((mas.abstractAgent) this.myAgent).getMyTreasureType().equals(b.toString())) {
 				int g = ((mas.abstractAgent) this.myAgent).pick();
 				if (g > 0) {
 					List<Couple<String, List<Attribute>>> lobs2 = ((mas.abstractAgent) this.myAgent).observe();// myPosition
@@ -133,9 +122,17 @@ public class MoveBehaviour extends TickerBehaviour {
 				}
 			}
 
+			// TODO check if a treasure was moved or removed
+
 			// wake up behaviour if new treasure was found
-			if (newNode && !b.equals("")) {
+			if (!treasures.containsKey(myPosition) && b != null) {
+				newTreasure = true;
+				treasures.put(myPosition, new TreasureInfo(b, (int) b.getValue(), myPosition));
+				System.out.println(myAgentName + " : new treasure found on node " + myPosition + " : " + b);
 				awakeParent();
+			}
+			else {
+				newTreasure = false;
 			}
 
 			String nextNode = "";
