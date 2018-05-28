@@ -78,6 +78,11 @@ public class UnstuckBehaviour extends TickerBehaviour {
 
 		map.put(lobs.get(0).getLeft(), new NodeInfo(lobs.get(0).getRight(), lobs.get(0).getLeft(), connected));
 
+		if (((mas.abstractAgent) this.myAgent).emptyMyBackPack("AgentTanker1")) {
+			System.out.println(myAgentName + " : given backpack content to tanker.");
+			System.out.println(myAgentName + " : my current backpack capacity is:" + ((mas.abstractAgent) this.myAgent).getBackPackFreeSpace());
+		}
+
 		int time = ((CustomAgent) this.myAgent).agentBlockingTime;
 		if (target.equals(myPosition) || checkGoal(map, agents, time)) {
 			// not stuck anymore !
@@ -145,7 +150,8 @@ public class UnstuckBehaviour extends TickerBehaviour {
 		agInfo.update();
 		((CustomAgent) myAgent).agents.put(myAgentName, agInfo);
 	}
-
+	// TODO add MOVEOUT behaviour
+	// TODO try to get path to free node ?
 
 	private void switchBehaviour() {
 		switch (previousGoal) {
@@ -158,7 +164,9 @@ public class UnstuckBehaviour extends TickerBehaviour {
 		case waitForInput:
 			myAgent.addBehaviour(new TankerBehaviour((abstractAgent) myAgent));
 			break;
-
+		case giveTreasure:
+			myAgent.addBehaviour(new GetTreasureBehaviour((abstractAgent) myAgent));
+			break;
 		default:
 			System.err.println("Error : unimplemented behaviour switch : " + previousGoal.toString());
 			break;
@@ -169,15 +177,18 @@ public class UnstuckBehaviour extends TickerBehaviour {
 
 	private boolean checkGoal(HashMap<String, NodeInfo> map, HashMap<String, AgentInfo> agents, int time) {
 		boolean reached = false;
+		AgentInfo tanker = agents.get("AgentTanker1");
 		switch (previousGoal) {
 		case explore:
-			if (map.get(target).lastUpdate > 0) {
+			if (target != null && map.containsKey(target) && map.get(target).lastUpdate > 0) {
 				reached = true;
 			}
 			break;
 		case shareInformation:
 
-			// TODO
+			if (tanker != null && tanker.lastUpdate > System.currentTimeMillis() - 2 * ((CustomAgent) myAgent).agentBlockingTime) {
+				reached = true;
+			}
 
 			break;
 		case waitForInput:
@@ -185,6 +196,13 @@ public class UnstuckBehaviour extends TickerBehaviour {
 					|| MapUtils.checkPath(
 							MapUtils.getFreeNodePath(((mas.abstractAgent) this.myAgent).getCurrentPosition(), map, agents, time, myAgent.getLocalName()),
 							map, agents, time, myAgent.getLocalName())) {
+				reached = true;
+			}
+			break;
+
+		case giveTreasure:
+			if (tanker != null && tanker.lastUpdate > System.currentTimeMillis() - 2 * ((CustomAgent) myAgent).agentBlockingTime
+			&& ((abstractAgent) myAgent).getBackPackFreeSpace() > 0) {
 				reached = true;
 			}
 			break;

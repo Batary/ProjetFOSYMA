@@ -7,7 +7,9 @@ import java.util.Map;
 
 import env.Attribute;
 import env.Couple;
+import env.EntityType;
 import jade.core.behaviours.SimpleBehaviour;
+import mas.abstractAgent;
 import mas.agents.CustomAgent;
 import mas.exceptions.NoUnvisitedNodeException;
 import mas.exceptions.PathBlockedException;
@@ -83,23 +85,28 @@ public class ExploreBehaviour extends SimpleBehaviour {
 
 			map.put(lobs.get(0).getLeft(),new NodeInfo(lobs.get(0).getRight(), lobs.get(0).getLeft(), connected) );
 
-			// TODO try to secure treasure --> behaviour
+			// change behaviour to GetTreasureBehaviour
+			if (agInfo.type == EntityType.AGENT_COLLECTOR) {
 
-
-
-			// check if treasure is not assigned
-			for (Map.Entry<String, TreasureInfo> entry : treasures.entrySet()) {
-				String key = entry.getKey();
-				TreasureInfo value = entry.getValue();
-
-				if (value.collectorAgent == null) {
+				// check if treasure is not assigned
+				for (Map.Entry<String, TreasureInfo> entry : treasures.entrySet()) {
+					String key = entry.getKey();
+					TreasureInfo value = entry.getValue();
 					// treasure is not assigned
+					if (value.collectorAgent == null && ((abstractAgent) myAgent).getMyTreasureType().equals(value.type.getName())) {
+						System.out.println("Assigned node " + key + " " + value.type + " to " + myAgentName);
+						// treasures.get(key).collectorAgent = myAgentName;
+						agInfo.update();
+						agents.put(myAgentName, agInfo);
+						move.stop();
+						myAgent.addBehaviour(new GetTreasureBehaviour((abstractAgent) myAgent));
+						this.stop();
+						return;
+					} /*else if (value.collectorAgent.equals(myAgentName)) {
+						// treasure is already assigned to this agent
 
-				} else if (value.collectorAgent.equals(myAgentName)) {
-					// treasure is already assigned to this agent
-
+						}*/
 				}
-
 			}
 
 			// new treasure found, reporting it to the tanker agent
@@ -112,10 +119,9 @@ public class ExploreBehaviour extends SimpleBehaviour {
 					// String dest = "";
 					try {
 						// continue exploration
-						MapUtils.getUnvisitedNode(myPosition, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime, myAgentName);
 						agInfo.goal = GoalType.explore;
+						MapUtils.getUnvisitedNode(myPosition, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime, myAgentName);
 					} catch (NoUnvisitedNodeException e) {
-						// TODO change behaviour to GetTreasureBehaviour
 
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -129,7 +135,6 @@ public class ExploreBehaviour extends SimpleBehaviour {
 						agInfo.path = MapUtils.getPath(myPosition, agInfo.reference, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime, myAgentName);
 					} catch (PathBlockedException e) {
 
-						System.out.println(myAgentName + " : path is blocked.");
 						agInfo.stuckCounter = 3;
 						agInfo.update();
 						agents.put(myAgentName, agInfo);
@@ -161,14 +166,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 				} 
 				catch (NoUnvisitedNodeException e) {
 					if (agInfo.goal == GoalType.explore) {
-						System.out.println(myAgentName + " : map exploration is over (" + map.size() + " nodes). Switching to another behaviour.");
-					}
-
-					// change behaviour here --> go back to transmit data
-					agents.get(myAgent.getLocalName()).goal = GoalType.shareInformation;
-
-					if (agInfo.reference == null) {
-						// try to find tankerAgent by going to the oldest visited node
+						// System.out.println(myAgentName + " : map exploration is over (" + map.size() + " nodes). Switching to another behaviour.");
 						try {
 							agInfo.path = MapUtils.getOldestNodePath(myPosition, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime,
 									myAgentName);
@@ -186,10 +184,34 @@ public class ExploreBehaviour extends SimpleBehaviour {
 						} catch (Exception ex) {
 							ex.printStackTrace();
 						}
-
-					} else {
-						return;
 					}
+					/*
+										// change behaviour here --> go back to transmit data
+										agents.get(myAgent.getLocalName()).goal = GoalType.shareInformation;
+
+										if (agInfo.reference == null) {
+											// try to find tankerAgent by going to the oldest visited node
+											try {
+												agInfo.path = MapUtils.getOldestNodePath(myPosition, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime,
+														myAgentName);
+
+												if (agInfo.path == null) {
+													System.out.println(myAgentName + " : path is blocked.");
+													agInfo.stuckCounter = 3;
+													agInfo.update();
+													agents.put(myAgentName, agInfo);
+													move.stop();
+													myAgent.addBehaviour(new UnstuckBehaviour(myAgent, agInfo.goal, dest));
+													this.stop();
+													return;
+												}
+											} catch (Exception ex) {
+												ex.printStackTrace();
+											}
+										} else {
+											return;
+										}
+					 */
 				}
 				catch (PathBlockedException e) {
 

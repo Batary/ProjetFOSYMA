@@ -6,7 +6,6 @@ import java.util.List;
 
 import env.Attribute;
 import env.Couple;
-import jade.core.AID;
 import jade.core.behaviours.SimpleBehaviour;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
@@ -17,6 +16,7 @@ import mas.utils.AgentInfo;
 import mas.utils.GoalType;
 import mas.utils.MapUtils;
 import mas.utils.NodeInfo;
+import mas.utils.TreasureInfo;
 
 //wumpus : attribut stench (sur case)
 
@@ -26,7 +26,6 @@ public class TankerBehaviour extends SimpleBehaviour {
 	private String myAgentName;
 	private AgentInfo agInfo;
 	private boolean done = false;
-	public boolean waiting = true;
 	private MoveBehaviour move;
 
 	public TankerBehaviour (final mas.abstractAgent myagent) {
@@ -38,6 +37,8 @@ public class TankerBehaviour extends SimpleBehaviour {
 		//Example to retrieve the current position
 		String myPosition=((mas.abstractAgent)this.myAgent).getCurrentPosition();
 		HashMap<String, AgentInfo> agents = ((CustomAgent)this.myAgent).agents;
+		HashMap<String, NodeInfo> map = ((CustomAgent) (this.myAgent)).map;
+		HashMap<String, TreasureInfo> treasures = ((CustomAgent) this.myAgent).treasures;
 
 		if (myPosition != null && !myPosition.isEmpty()) {
 
@@ -53,7 +54,6 @@ public class TankerBehaviour extends SimpleBehaviour {
 					agInfo.goal = GoalType.waitForInput;
 				}
 			}
-			HashMap<String, NodeInfo> map = ((CustomAgent) (this.myAgent)).map;
 
 			// if (agInfo.isStuck()) {
 			// myAgent.addBehaviour(new UnstuckBehaviour(myAgent, agInfo.goal, agInfo.path.get(agInfo.path.size() - 1)));
@@ -81,7 +81,6 @@ public class TankerBehaviour extends SimpleBehaviour {
 
 			map.put(lobs.get(0).getLeft(), new NodeInfo(lobs.get(0).getRight(), lobs.get(0).getLeft(), connected));
 
-			// TODO add flags
 			if(agInfo.reference == null) {
 
 				agInfo.path = MapUtils.getFreeNodePath(myPosition, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime, myAgentName);
@@ -104,7 +103,6 @@ public class TankerBehaviour extends SimpleBehaviour {
 					// ((CustomAgent) this.myAgent).agentBlockingTime, myAgentName);
 					// }
 					// } catch (Exception e) {
-					// // TODO Auto-generated catch block
 					// e.printStackTrace();
 					// }
 
@@ -136,60 +134,97 @@ public class TankerBehaviour extends SimpleBehaviour {
 				// 2) get the message
 				ACLMessage msg = this.myAgent.receive(msgTemplate);
 
-				if (waiting) {
+				if (agInfo.currentTreasure == null) {
 					agInfo.goal = GoalType.waitForInput;
 					if (msg != null) {
 						String dest = msg.getContent();
 						if (map.containsKey(dest)) {
 
 							// accept and send reply
-							final ACLMessage msg1 = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
-							msg1.setSender(this.myAgent.getAID());
-							msg1.addReceiver(new AID(msg.getSender().getLocalName(), AID.ISLOCALNAME));
-							((abstractAgent) (this.myAgent)).sendMessage(msg1);
+							// final ACLMessage msg1 = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
+							// msg1.setSender(this.myAgent.getAID());
+							// msg1.addReceiver(new AID(msg.getSender().getLocalName(), AID.ISLOCALNAME));
+							// ((abstractAgent) (this.myAgent)).sendMessage(msg1);
 
-							waiting = false;
+							agInfo.currentTreasure = dest;
 
 							// switch behaviour
 							agInfo.goal = GoalType.getTreasure;
 
+						}
+						else {
+							// send reply : node is not in map
+							// final ACLMessage msg1 = new ACLMessage(ACLMessage.NOT_UNDERSTOOD);
+							// msg1.setSender(this.myAgent.getAID());
+							// msg1.addReceiver(new AID(msg.getSender().getLocalName(), AID.ISLOCALNAME));
+							// ((abstractAgent) (this.myAgent)).sendMessage(msg1);
+						}
+					}
+				} else {
+					// send reply : agent is already busy
+					// final ACLMessage msg1 = new ACLMessage(ACLMessage.REJECT_PROPOSAL);
+					// msg1.setSender(this.myAgent.getAID());
+					// msg1.addReceiver(new AID(msg.getSender().getLocalName(), AID.ISLOCALNAME));
+					// ((abstractAgent) (this.myAgent)).sendMessage(msg1);
+
+				}
+
+				if (agInfo.reference == myPosition && agInfo.currentTreasure == null) {
+					block();
+				}
+				else {
+					if (agInfo.currentTreasure == null) {
+						// go back to reference
+						try {
+							agInfo.path = MapUtils.getPath(myPosition, agInfo.reference, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime,
+									myAgentName);
+							if (!agInfo.path.isEmpty()) {
+								agInfo.path.remove(agInfo.path.size() - 1);
+							}
+						} catch (PathBlockedException e) {
+							System.out.println(myAgentName + " : path is blocked");
+							agInfo.stuckCounter = 3;
+							agInfo.update();
+							agents.put(myAgentName, agInfo);
+							myAgent.addBehaviour(new UnstuckBehaviour(myAgent, GoalType.waitForInput, agInfo.reference));
+							this.stop();
+							return;
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+
+					} else {
+						// get to the treasure
+						// test if we are on a nearby node
+						if (!map.get(agInfo.currentTreasure).connectedNodes.contains(myPosition)) {
 							try {
-								agInfo.path = MapUtils.getPath(myPosition, dest, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime, myAgentName);
+								agInfo.path = MapUtils.getPath(myPosition, agInfo.currentTreasure, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime,
+										myAgentName);
+								if (!agInfo.path.isEmpty()) {
+									agInfo.path.remove(agInfo.path.size()-1);
+								}
 							} catch (PathBlockedException e) {
 								System.out.println(myAgentName + " : path is blocked by " + e.agent);
 								agInfo.stuckCounter = 3;
 								agInfo.update();
 								agents.put(myAgentName, agInfo);
-								myAgent.addBehaviour(new UnstuckBehaviour(myAgent, GoalType.getTreasure, dest));
+								myAgent.addBehaviour(new UnstuckBehaviour(myAgent, GoalType.getTreasure, agInfo.currentTreasure));
 								this.stop();
 								return;
 							} catch (Exception e) {
 								e.printStackTrace();
 							}
-
-							// TODO set behaviour (treasure as argument)
-
 						}
 						else {
-							// send reply : node is not in map
-							final ACLMessage msg1 = new ACLMessage(ACLMessage.NOT_UNDERSTOOD);
-							msg1.setSender(this.myAgent.getAID());
-							msg1.addReceiver(new AID(msg.getSender().getLocalName(), AID.ISLOCALNAME));
-							((abstractAgent) (this.myAgent)).sendMessage(msg1);
+							// test if treasure is finished
+							if (treasures.get(agInfo.currentTreasure) == null || treasures.get(agInfo.currentTreasure).amount == 0) {
+								agInfo.currentTreasure = null;
+								return;
+							} else {
+								block();
+							}
 						}
 					}
-				} else {
-					// TODO set meeting point ?
-					// send reply : agent is already busy
-					final ACLMessage msg1 = new ACLMessage(ACLMessage.REJECT_PROPOSAL);
-					msg1.setSender(this.myAgent.getAID());
-					msg1.addReceiver(new AID(msg.getSender().getLocalName(), AID.ISLOCALNAME));
-					((abstractAgent) (this.myAgent)).sendMessage(msg1);
-
-				}
-
-				if (agInfo.reference == myPosition && waiting) {
-					block();
 				}
 			}
 			agents.put(myAgentName, agInfo);

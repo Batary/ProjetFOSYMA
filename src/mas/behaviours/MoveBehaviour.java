@@ -107,19 +107,20 @@ public class MoveBehaviour extends TickerBehaviour {
 
 			// If the agent picked (part of) the treasure
 			if (((mas.abstractAgent) this.myAgent).getBackPackFreeSpace() > 0 && b != null
-					&& ((mas.abstractAgent) this.myAgent).getMyTreasureType().equals(b.toString())) {
+					&& ((mas.abstractAgent) this.myAgent).getMyTreasureType().equals(b.getName())) {
 				int g = ((mas.abstractAgent) this.myAgent).pick();
 				if (g > 0) {
 					List<Couple<String, List<Attribute>>> lobs2 = ((mas.abstractAgent) this.myAgent).observe();// myPosition
 					System.out.println(myAgentName + " : list of observables after picking " + lobs2);
-
-					System.out.println(myAgentName + " : The agent grabbed :" + g);
-
-					System.out.println(myAgentName + " : My current backpack capacity is:" + ((mas.abstractAgent) this.myAgent).getBackPackFreeSpace());
-					System.out.println(myAgentName + " : The agent tries to transfer is load into the Silo (if reachable); succes ? : "
-							+ ((mas.abstractAgent) this.myAgent).emptyMyBackPack("AgentTanker1"));
-					System.out.println(myAgentName + " : My current backpack capacity is:" + ((mas.abstractAgent) this.myAgent).getBackPackFreeSpace());
+					System.out.println(myAgentName + " : the agent grabbed :" + g);
+					System.out.println(myAgentName + " : my current backpack capacity is:" + ((mas.abstractAgent) this.myAgent).getBackPackFreeSpace());
 				}
+			}
+
+			if (((mas.abstractAgent) this.myAgent).emptyMyBackPack("AgentTanker1")) {
+				System.out.println(myAgentName + " : given backpack content to tanker.");
+				System.out.println(myAgentName + " : my current backpack capacity is:" + ((mas.abstractAgent) this.myAgent).getBackPackFreeSpace());
+				awakeParent();
 			}
 
 			// TODO check if a treasure was moved or removed
@@ -163,6 +164,7 @@ public class MoveBehaviour extends TickerBehaviour {
 				System.out.println(myAgentName + " : standing on node " + nextNode);
 				if (!agInfo.path.isEmpty()) {
 					agInfo.path.remove(0);
+					agInfo.update();
 				}
 			}
 

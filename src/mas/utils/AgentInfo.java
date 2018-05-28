@@ -17,6 +17,9 @@ public class AgentInfo implements Serializable {
 	// reference to the position of a tanker agent
 	public String reference = null;
 
+	// the treasure this agent is currently working on
+	public String currentTreasure = null;
+
 	// triggers priority and stuck mechanisms
 	public int stuckCounter = 0;
 
@@ -27,6 +30,10 @@ public class AgentInfo implements Serializable {
 	public List<String> path;
 
 	public GoalType goal;
+
+	// the backpack space of a collector agent
+	public int freeSpace;
+	public int maxSpace;
 
 	public AgentInfo(String position, EntityType type, String name) {
 		this.position = position;
