@@ -14,6 +14,8 @@ import jade.wrapper.AgentController;
 import jade.wrapper.ContainerController;
 import jade.wrapper.StaleProxyException;
 import mas.agents.CollectorAgent;
+import mas.agents.DummyWumpusShift;
+import mas.agents.ExplorerAgent;
 import mas.agents.TankerAgent;
 
 public class Principal {
@@ -31,8 +33,8 @@ public class Principal {
 		// 0) Create the real environment and the observed one
 		// env = new Environment(ENVtype.GRID_T, 5, null);
 		// env = new Environment(ENVtype.DOROGOVTSEV_T, 25, null);
-		env = new Environment("ressources/test", "ressources/test-config");
-		// env = new Environment("ressources/map2017-2", "ressources/map2017-config");
+		// env = new Environment("ressources/test", "ressources/test-config");
+		env = new Environment("ressources/map2017-2", "ressources/map2017-config");
 
 		// 1), create the platform (Main container (DF+AMS) + containers + monitoring agents : RMA and SNIFFER)
 		rt = emptyPlatform(containerList);
@@ -156,7 +158,7 @@ public class Principal {
 		/*
 		 * Local and no GateKeeper
 		 */
-		/*
+
 		//	wumpus on container0
 		c = containerList.get("container0");
 		agentName="Golem";
@@ -168,15 +170,15 @@ public class Principal {
 		} catch (StaleProxyException e) {
 			e.printStackTrace();
 		}
-		 */
+
 
 		// Explorer (no backpack)
 		c = containerList.get("container0");
-		/*
+
 		//agentExplo:AgentExplorer1:2:-1:-1
 		//agentExplo:AgentExplorer2:3:-1:-1
 		//agentExplo:AgentExplorer3:4:-1:-1
-		agentName = "AgentExplorer1";
+		agentName = "Indiana";
 		try {
 
 			Object[] objtab = new Object[] { env, EntityType.AGENT_EXPLORER };// used to give informations to the agent
@@ -187,7 +189,7 @@ public class Principal {
 			e.printStackTrace();
 		}
 
-		agentName = "AgentExplorer2";
+		agentName = "Lara";
 		try {
 
 			Object[] objtab = new Object[] { env, EntityType.AGENT_EXPLORER };// used to give informations to the agent
@@ -197,8 +199,8 @@ public class Principal {
 		} catch (StaleProxyException e) {
 			e.printStackTrace();
 		}
-		 */
-		agentName = "AgentCollector1";
+
+		agentName = "Diams";
 		try {
 
 			Object[] objtab = new Object[] { env, EntityType.AGENT_COLLECTOR };// used to give informations to the agent
@@ -209,7 +211,7 @@ public class Principal {
 			e.printStackTrace();
 		}
 
-		agentName = "AgentCollector2";
+		agentName = "Picsou";
 		try {
 
 			Object[] objtab = new Object[] { env, EntityType.AGENT_COLLECTOR };// used to give informations to the agent

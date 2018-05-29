@@ -6,6 +6,7 @@ import java.util.List;
 
 import env.Attribute;
 import env.Couple;
+import env.EntityType;
 import jade.core.behaviours.Behaviour;
 import jade.core.behaviours.TickerBehaviour;
 import mas.agents.CustomAgent;
@@ -50,6 +51,10 @@ public class MoveBehaviour extends TickerBehaviour {
 				agents.put(myAgentName, agInfo);
 			} else {
 				agInfo = agents.get(myAgentName);
+				if (agInfo.type == EntityType.AGENT_COLLECTOR) {
+					agInfo.freeSpace = ((mas.abstractAgent) this.myAgent).getBackPackFreeSpace();
+					agInfo.maxSpace = (agInfo.maxSpace > agInfo.freeSpace ? agInfo.maxSpace : agInfo.freeSpace);
+				}
 				agInfo.position = myPosition;
 				agInfo.update();
 			}
@@ -117,13 +122,13 @@ public class MoveBehaviour extends TickerBehaviour {
 				}
 			}
 
-			if (((mas.abstractAgent) this.myAgent).emptyMyBackPack("AgentTanker1")) {
+			if (((mas.abstractAgent) this.myAgent).getBackPackFreeSpace() < agInfo.maxSpace && agInfo.type == EntityType.AGENT_COLLECTOR
+					&& ((mas.abstractAgent) this.myAgent).emptyMyBackPack("AgentTanker1")) {
 				System.out.println(myAgentName + " : given backpack content to tanker.");
-				System.out.println(myAgentName + " : my current backpack capacity is:" + ((mas.abstractAgent) this.myAgent).getBackPackFreeSpace());
 				awakeParent();
 			}
 
-			// TODO check if a treasure was moved or removed
+			// TODO check if a treasure was moved ?
 
 			// wake up behaviour if new treasure was found
 			if (!treasures.containsKey(myPosition) && b != null) {
@@ -134,6 +139,18 @@ public class MoveBehaviour extends TickerBehaviour {
 			}
 			else {
 				newTreasure = false;
+				if (treasures.containsKey(myPosition) && treasures.get(myPosition).amount > 0) {
+					if (b == null) {
+						// no more treasure
+						treasures.get(myPosition).amount = 0;
+					} else {
+						treasures.get(myPosition).amount = (int) b.getValue();
+					}
+					awakeParent();
+				}
+				else if (b != null) {
+					treasures.put(myPosition, new TreasureInfo(b, (int) b.getValue(), myPosition));
+				}
 			}
 
 			String nextNode = "";

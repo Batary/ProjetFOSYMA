@@ -48,6 +48,14 @@ public class MapUtils {
 					}
 				}
 
+				for (String n : MapUtils.getWumpusNodes(map, agents, time)) {
+					if (!nodesToAvoid.containsKey(n)) {
+						nodesToAvoid.put(n, new ArrayList<Integer>());
+					}
+					nodesToAvoid.get(n).add(0);
+					nodesToAvoid.get(n).add(1);
+				}
+
 			}
 		}
 
@@ -81,8 +89,6 @@ public class MapUtils {
 		// defines a list of steps where this agent should avoid some nodes
 		Map<String, List<Integer>> nodesToAvoid = getNodesToAvoid(start, map, agents, time, caller, false);
 		List<String> blockedNodes = new ArrayList<>();
-
-		// TODO save blocking agent's names to throw ?
 
 		nodesToVisit.put(start, currentNode);
 		nodesToVisitNames.add(start);
@@ -128,7 +134,7 @@ public class MapUtils {
 				break;
 			} else {
 				if (nodesToVisit.get(nodesToVisitNames.get(0)) == null) {
-					System.out.println(currentNode.position);
+					// System.out.println(currentNode.position);
 				}
 				currentNode = nodesToVisit.get(nodesToVisitNames.get(0));
 			}
@@ -140,8 +146,7 @@ public class MapUtils {
 		// if no path is found, send a PathNotFoundException(agentBlocking)
 		if (!currentNode.position.equals(dest)) {
 
-			System.out.println(caller + " start = " + start + ", dest = " + dest);
-			System.out.println(caller + " : path blocked on nodes " + blockedNodes.toString());
+			// System.out.println(caller +" : start = " + start + ", dest = " + dest + " : path blocked on nodes " + blockedNodes.toString());
 			List<String> l = getUnusedNodePath(start, map, agents, time, caller);
 			if (l == null) {
 				throw new PathBlockedException(null);
@@ -345,7 +350,7 @@ public class MapUtils {
 
 		if (!isFreeNode(currentNode.position, map, agents, time, caller)) {
 
-			System.out.println(caller + " (at node " + start + ") : no free node found !");
+			// System.out.println(caller + " (at node " + start + ") : no free node found !");
 			return null;
 		} else {
 			List<String> path = new ArrayList<>(currentNode.distance + 1);
@@ -494,7 +499,7 @@ public class MapUtils {
 		}
 
 		if (!found /*nodesToAvoid.containsKey(currentNode.position)*/) {
-			System.out.println(caller + " (at node " + start + ") : no unused node found ! Nodes " + blockedNodes.toString() + " blocked !");
+			// System.out.println(caller + " (at node " + start + ") : no unused node found ! Nodes " + blockedNodes.toString() + " blocked !");
 			return null;
 		} else {
 			List<String> path = new ArrayList<>(currentNode.distance + 1);
@@ -521,17 +526,38 @@ public class MapUtils {
 	}
 
 	/** Try to find the wumpus possible nodes.
-	 * 
-	 * @param map
-	 *            the current map of this agent
 	 * @return the nodes where the wumpus could be, an empty list if unknown */
-	public static List<NodeInfo> getWumpusNodes(HashMap<String, NodeInfo> map) {
-		// TODO
-		return null;
+	public static List<String> getWumpusNodes(HashMap<String, NodeInfo> map, HashMap<String, AgentInfo> agents, int time) {
+		List<String> nodes = new ArrayList<>();
+		for (Map.Entry<String, AgentInfo> entry : agents.entrySet()) {
+			AgentInfo value = entry.getValue();
+
+			if (value.stuckCounter > 0 && value.lastUpdate >= System.currentTimeMillis() - 3 * time
+					&& map.get(value.position).nodeContent.contains(Attribute.STENCH)) {
+				if (value.path != null && !value.path.isEmpty()) {
+					nodes.add(value.path.get(0));
+					if (map.get(value.path.get(0)) != null && map.get(value.path.get(0)).connectedNodes != null) {
+						nodes.addAll(map.get(value.path.get(0)).connectedNodes);
+					}
+				} else {
+					for (String n : map.get(value.position).connectedNodes) {
+						if (map.get(n) == null || map.get(n).nodeContent == null
+								|| map.get(n).nodeContent != null && map.get(n).nodeContent.contains(Attribute.STENCH)
+								&& map.get(n).lastUpdate >= System.currentTimeMillis() - 3 * time) {
+							nodes.add(n);
+						}
+					}
+				}
+			}
+		}
+		return nodes;
 	}
 
-	/** @return path to an old, reachable node */
-	public static List<String> getOldestNodePath(String start, HashMap<String, NodeInfo> map, HashMap<String, AgentInfo> agents, int time, String caller) {
+	/** @deprecated
+	 * @return path to an old, reachable node */
+	@Deprecated
+	public static List<String> getOldestNodePath1(String start, HashMap<String, NodeInfo> map, HashMap<String, AgentInfo> agents, int time,
+			String caller) {
 
 		NodeInfo startNode = map.get(start);
 		if (startNode == null) {
@@ -564,17 +590,15 @@ public class MapUtils {
 					if (!nodesToAvoid.containsKey(n) || !nodesToAvoid.get(n).contains(currentNode.distance + 1)) {
 						nodesToVisit.put(n, new PathNode(map.get(n), currentNode, currentNode.distance + 1, false, null));
 						nodesToVisitNames.add(n);
-
-						if (oldestNode.lastUpdate > currentNode.lastUpdate) {
-							oldestNode = currentNode;
-						}
-
 					} else {
 						if (!blockedNodes.contains(n)) {
 							blockedNodes.add(n);
 						}
 					}
 				}
+			}
+			if (oldestNode.lastUpdate > currentNode.lastUpdate) {
+				oldestNode = currentNode;
 			}
 			if (nodesToVisit.isEmpty()) {
 				break;
@@ -585,7 +609,7 @@ public class MapUtils {
 
 		if (currentNode == oldestNode) {
 
-			System.out.println(caller + " (at node " + start + ") : agent is blocked !");
+			// System.out.println(caller + " (at node " + start + ") : agent is blocked !");
 			return null;
 		} else {
 			List<String> path = new ArrayList<>(currentNode.distance + 1);
@@ -598,6 +622,65 @@ public class MapUtils {
 			// System.out.println();
 			return path;
 		}
+	}
+
+	/** @return an old, reachable node */
+	public static String getOldestNode(String start, HashMap<String, NodeInfo> map, HashMap<String, AgentInfo> agents, int time, String caller) {
+
+		NodeInfo startNode = map.get(start);
+		if (startNode == null) {
+			System.err.println("getOldestNodePath : start should not be null !");
+			return null;
+		}
+		PathNode currentNode = new PathNode(startNode, null, 0, false, null);
+		PathNode oldestNode = currentNode;
+
+		Map<String, PathNode> visitedNodes = new HashMap<>();
+		Map<String, PathNode> nodesToVisit = new HashMap<>();
+		List<String> nodesToVisitNames = new ArrayList<>();
+
+		// defines a list of steps where this agent should avoid some nodes
+		Map<String, List<Integer>> nodesToAvoid = getNodesToAvoid(start, map, agents, time, caller, true);
+		List<String> blockedNodes = new ArrayList<>();
+
+		nodesToVisit.put(start, currentNode);
+		nodesToVisitNames.add(start);
+
+		while (!nodesToVisit.isEmpty()) {
+			visitedNodes.put(currentNode.position, currentNode);
+			nodesToVisit.remove(currentNode.position);
+			nodesToVisitNames.remove(currentNode.position);
+
+			// browse neighbours
+			for (String n : currentNode.connectedNodes) {
+				if (visitedNodes.get(n) == null && nodesToVisit.get(n) == null) {
+					// add neighbours if they have not been met yet and they are not blocked
+					if (!nodesToAvoid.containsKey(n) || !nodesToAvoid.get(n).contains(currentNode.distance + 1)) {
+						nodesToVisit.put(n, new PathNode(map.get(n), currentNode, currentNode.distance + 1, false, null));
+						nodesToVisitNames.add(n);
+					} else {
+						if (!blockedNodes.contains(n)) {
+							blockedNodes.add(n);
+						}
+					}
+				}
+			}
+			if (oldestNode.lastUpdate > currentNode.lastUpdate) {
+				oldestNode = currentNode;
+			}
+			if (nodesToVisit.isEmpty()) {
+				break;
+			} else {
+				currentNode = nodesToVisit.get(nodesToVisitNames.get(0));
+			}
+		}
+		return oldestNode.position;
+
+		// if (currentNode == oldestNode) {
+		//
+		// System.out.println(caller + " (at node " + start + ") : agent is blocked !");
+		// return null;
+		// }
 	}
 
 }

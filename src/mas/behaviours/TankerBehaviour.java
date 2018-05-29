@@ -3,14 +3,22 @@ package mas.behaviours;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import env.Attribute;
 import env.Couple;
+import jade.content.lang.Codec;
+import jade.content.lang.sl.SLCodec;
+import jade.content.onto.Ontology;
+import jade.content.onto.basic.Action;
 import jade.core.behaviours.SimpleBehaviour;
+import jade.domain.JADEAgentManagement.JADEManagementOntology;
+import jade.domain.JADEAgentManagement.ShutdownPlatform;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import mas.abstractAgent;
 import mas.agents.CustomAgent;
+import mas.exceptions.NoUnvisitedNodeException;
 import mas.exceptions.PathBlockedException;
 import mas.utils.AgentInfo;
 import mas.utils.GoalType;
@@ -53,6 +61,53 @@ public class TankerBehaviour extends SimpleBehaviour {
 				if (agInfo.goal == null) {
 					agInfo.goal = GoalType.waitForInput;
 				}
+			}
+
+			// end simulation
+			try {
+				MapUtils.getUnvisitedNode(myPosition, map, agents, ((CustomAgent) myAgent).agentBlockingTime, myAgentName);
+			} catch (NoUnvisitedNodeException e1) {
+				boolean finished = true;
+				for (Map.Entry<String, TreasureInfo> entry : treasures.entrySet()) {
+					if (entry.getValue().amount > 0) {
+						finished = false;
+						break;
+					}
+				}
+				for (Map.Entry<String, AgentInfo> entry : agents.entrySet()) {
+					if (entry.getValue().freeSpace < entry.getValue().maxSpace) {
+						finished = false;
+						break;
+					}
+				}
+				// assumes wumpus has not moved a treasure and we do not know about it
+				if (finished) {
+					System.err.println("Map is completely explored and all treasures have been gathered !\n\nStopping platform...\n");
+
+					Codec codec = new SLCodec();
+					Ontology jmo = JADEManagementOntology.getInstance();
+					myAgent.getContentManager().registerLanguage(codec);
+					myAgent.getContentManager().registerOntology(jmo);
+					ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
+					msg.addReceiver(myAgent.getAMS());
+					msg.setLanguage(codec.getName());
+					msg.setOntology(jmo.getName());
+					try {
+						myAgent.getContentManager().fillContent(msg, new Action(myAgent.getAID(), new ShutdownPlatform()));
+						myAgent.send(msg);
+					} catch (Exception e) {
+					}
+					this.stop();
+					return;
+				}
+			} catch (Exception e1) {
+				// e1.printStackTrace();
+			}
+
+			// set movement behaviour
+			if (move == null || move.done()) {
+				move = new MoveBehaviour((abstractAgent) myAgent, this, null);
+				myAgent.addBehaviour(move);
 			}
 
 			// if (agInfo.isStuck()) {
@@ -114,13 +169,7 @@ public class TankerBehaviour extends SimpleBehaviour {
 						// agInfo.reference = agInfo.path.get(agInfo.path.size() - 1);
 						System.out.println(myAgentName + " : my position : " + myPosition + " ; path to reference point : " + agInfo.path);
 
-						// set movement behaviour
-						if (move == null || move.done()) {
-							move = new MoveBehaviour((abstractAgent) myAgent, this, agInfo.path.get(agInfo.path.size() - 1));
-							myAgent.addBehaviour(move);
-						} else {
-							move.destination = agInfo.path.get(agInfo.path.size() - 1);
-						}
+						move.destination = agInfo.path.get(agInfo.path.size() - 1);
 					}
 				}
 				block();
@@ -138,7 +187,7 @@ public class TankerBehaviour extends SimpleBehaviour {
 					agInfo.goal = GoalType.waitForInput;
 					if (msg != null) {
 						String dest = msg.getContent();
-						if (map.containsKey(dest)) {
+						if (map.containsKey(dest) && agents.containsKey(msg.getSender().getLocalName()) && treasures.containsKey(dest)) {
 
 							// accept and send reply
 							// final ACLMessage msg1 = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
@@ -147,10 +196,15 @@ public class TankerBehaviour extends SimpleBehaviour {
 							// ((abstractAgent) (this.myAgent)).sendMessage(msg1);
 
 							agInfo.currentTreasure = dest;
+							System.out.println("Assigned treasure node " + dest + " to " + msg.getSender().getLocalName());
+							treasures.get(dest).collectorAgent = msg.getSender().getLocalName();
 
-							// switch behaviour
+							// switch goal
 							agInfo.goal = GoalType.getTreasure;
-
+							agInfo.stuckCounter++;
+							agInfo.update();
+							agents.put(myAgentName, agInfo);
+							block();
 						}
 						else {
 							// send reply : node is not in map
@@ -166,25 +220,28 @@ public class TankerBehaviour extends SimpleBehaviour {
 					// msg1.setSender(this.myAgent.getAID());
 					// msg1.addReceiver(new AID(msg.getSender().getLocalName(), AID.ISLOCALNAME));
 					// ((abstractAgent) (this.myAgent)).sendMessage(msg1);
-
+					block();
 				}
 
 				if (agInfo.reference == myPosition && agInfo.currentTreasure == null) {
 					block();
 				}
 				else {
-					if (agInfo.currentTreasure == null) {
+					if (agInfo.currentTreasure == null || treasures.get(agInfo.currentTreasure).amount == 0) {
 						// go back to reference
+						agInfo.currentTreasure = null;
 						try {
 							agInfo.path = MapUtils.getPath(myPosition, agInfo.reference, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime,
 									myAgentName);
-							if (!agInfo.path.isEmpty()) {
-								agInfo.path.remove(agInfo.path.size() - 1);
-							}
+							// if (!agInfo.path.isEmpty()) {
+							// agInfo.path.remove(agInfo.path.size() - 1);
+							// }
+							block();
 						} catch (PathBlockedException e) {
 							System.out.println(myAgentName + " : path is blocked");
 							agInfo.stuckCounter = 3;
 							agInfo.update();
+							move.stop();
 							agents.put(myAgentName, agInfo);
 							myAgent.addBehaviour(new UnstuckBehaviour(myAgent, GoalType.waitForInput, agInfo.reference));
 							this.stop();
@@ -203,12 +260,28 @@ public class TankerBehaviour extends SimpleBehaviour {
 								if (!agInfo.path.isEmpty()) {
 									agInfo.path.remove(agInfo.path.size()-1);
 								}
+								else {
+									agInfo.path = MapUtils.getUnusedNodePath(myPosition, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime,
+											myAgentName);
+									if (agInfo.path == null) {
+										agInfo.stuckCounter = 3;
+										agInfo.update();
+										agents.put(myAgentName, agInfo);
+										move.stop();
+										myAgent.addBehaviour(new UnstuckBehaviour(myAgent, GoalType.getTreasure, null));
+										this.stop();
+										return;
+									}
+								}
+								block();
 							} catch (PathBlockedException e) {
-								System.out.println(myAgentName + " : path is blocked by " + e.agent);
+								// System.out.println(myAgentName + " : path is blocked by " + e.agent);
 								agInfo.stuckCounter = 3;
 								agInfo.update();
+								move.stop();
 								agents.put(myAgentName, agInfo);
-								myAgent.addBehaviour(new UnstuckBehaviour(myAgent, GoalType.getTreasure, agInfo.currentTreasure));
+								myAgent.addBehaviour(
+										new UnstuckBehaviour(myAgent, GoalType.getTreasure, map.get(agInfo.currentTreasure).connectedNodes.get(0)));
 								this.stop();
 								return;
 							} catch (Exception e) {
@@ -216,11 +289,27 @@ public class TankerBehaviour extends SimpleBehaviour {
 							}
 						}
 						else {
-							// test if treasure is finished
+							// we are next to the treasure, test if treasure is finished
 							if (treasures.get(agInfo.currentTreasure) == null || treasures.get(agInfo.currentTreasure).amount == 0) {
 								agInfo.currentTreasure = null;
 								return;
 							} else {
+								String treasure = agInfo.currentTreasure;
+								// TreasureInfo ti = ((CustomAgent) myAgent).treasures.get(treasure);
+								String posCollector = agents.get(treasures.get(treasure).collectorAgent).position;
+								if (!treasure.equals(posCollector)) {
+									agInfo.path = MapUtils.getUnusedNodePath(myPosition, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime,
+											myAgentName);
+									if (agInfo.path == null) {
+										agInfo.stuckCounter = 3;
+										agInfo.update();
+										agents.put(myAgentName, agInfo);
+										move.stop();
+										myAgent.addBehaviour(new UnstuckBehaviour(myAgent, GoalType.getTreasure, null));
+										this.stop();
+										return;
+									}
+								}
 								block();
 							}
 						}

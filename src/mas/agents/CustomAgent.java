@@ -13,7 +13,7 @@ public abstract class CustomAgent extends abstractAgent {
 
 	private static final long serialVersionUID = 5792560475078466977L;
 
-	public int agentBlockingTime = 700;
+	public int agentBlockingTime = 2500;
 	public EntityType type;
 
 	public HashMap<String, NodeInfo> map;

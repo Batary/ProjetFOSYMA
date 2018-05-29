@@ -54,7 +54,6 @@ public class ReceiveMapBehavior extends SimpleBehaviour {
 						treasures.put(key, value);
 					}
 				}
-				// TODO ? remove empty treasures
 
 				// browse agents
 				for (Entry<String, AgentInfo> entry : inf.agents.entrySet()) {

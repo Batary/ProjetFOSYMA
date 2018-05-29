@@ -7,6 +7,7 @@ import java.util.Random;
 
 import env.Attribute;
 import env.Couple;
+import env.EntityType;
 import jade.core.Agent;
 import jade.core.behaviours.TickerBehaviour;
 import mas.abstractAgent;
@@ -16,6 +17,7 @@ import mas.utils.AgentInfo;
 import mas.utils.GoalType;
 import mas.utils.MapUtils;
 import mas.utils.NodeInfo;
+import mas.utils.TreasureInfo;
 
 /**This behaviour is used for any agent which is stuck. <br>
  * This will not be used in simple situations, as a priority order should handle it. <br><br>
@@ -43,6 +45,7 @@ public class UnstuckBehaviour extends TickerBehaviour {
 		super(a,((CustomAgent)a).agentBlockingTime);
 		this.previousGoal = goal;
 		this.target = targetNode;
+		System.out.println(myAgent.getLocalName() + " is stuck !");
 	}
 
 	@Override
@@ -78,13 +81,15 @@ public class UnstuckBehaviour extends TickerBehaviour {
 
 		map.put(lobs.get(0).getLeft(), new NodeInfo(lobs.get(0).getRight(), lobs.get(0).getLeft(), connected));
 
-		if (((mas.abstractAgent) this.myAgent).emptyMyBackPack("AgentTanker1")) {
-			System.out.println(myAgentName + " : given backpack content to tanker.");
-			System.out.println(myAgentName + " : my current backpack capacity is:" + ((mas.abstractAgent) this.myAgent).getBackPackFreeSpace());
+		if (agInfo.type == EntityType.AGENT_COLLECTOR && ((mas.abstractAgent) this.myAgent).emptyMyBackPack("AgentTanker1")) {
+			if (((mas.abstractAgent) this.myAgent).getBackPackFreeSpace() < agInfo.maxSpace)
+			{
+				System.out.println(myAgentName + " : given backpack content to tanker.");
+			}
 		}
 
 		int time = ((CustomAgent) this.myAgent).agentBlockingTime;
-		if (target.equals(myPosition) || checkGoal(map, agents, time)) {
+		if (tick > 3 && ((target != null && map.containsKey(target) && target.equals(myPosition)) || checkGoal(map, agents, time))) {
 			// not stuck anymore !
 			agInfo.position = myPosition;
 			agInfo.update();
@@ -111,15 +116,18 @@ public class UnstuckBehaviour extends TickerBehaviour {
 			// try to reach unused node
 			if ((agInfo.stuckCounter <= 5 && tick < 10) || tick % checkCounter / 1.5 == 0) {
 
-				agInfo.path = MapUtils.getUnusedNodePath(myPosition, map, agents, time, myAgentName);
-				if (agInfo.path != null) {
+				agInfo.path = MapUtils.getFreeNodePath(myPosition, map, agents, time, myAgentName);
+				if (agInfo.path == null) {
+					agInfo.path = MapUtils.getUnusedNodePath(myPosition, map, agents, time, myAgentName);
+				}
+				if (agInfo.path != null && !agInfo.path.isEmpty()) {
 					dest = agInfo.path.get(0);
 				}
 				else {
+					// TODO test free node ?
 					agInfo.path = new ArrayList<>();
 					agInfo.path.add(dest);
 				}
-
 			}
 
 			// try to go back to destination
@@ -164,6 +172,10 @@ public class UnstuckBehaviour extends TickerBehaviour {
 		case waitForInput:
 			myAgent.addBehaviour(new TankerBehaviour((abstractAgent) myAgent));
 			break;
+		case getTreasure:
+			myAgent.addBehaviour((((CustomAgent) myAgent).type == EntityType.AGENT_TANKER ? new TankerBehaviour((abstractAgent) myAgent)
+					: new GetTreasureBehaviour((abstractAgent) myAgent)));
+			break;
 		case giveTreasure:
 			myAgent.addBehaviour(new GetTreasureBehaviour((abstractAgent) myAgent));
 			break;
@@ -176,7 +188,7 @@ public class UnstuckBehaviour extends TickerBehaviour {
 	}
 
 	private boolean checkGoal(HashMap<String, NodeInfo> map, HashMap<String, AgentInfo> agents, int time) {
-		boolean reached = false;
+		boolean reached = tick > 100;
 		AgentInfo tanker = agents.get("AgentTanker1");
 		switch (previousGoal) {
 		case explore:
@@ -197,6 +209,26 @@ public class UnstuckBehaviour extends TickerBehaviour {
 							MapUtils.getFreeNodePath(((mas.abstractAgent) this.myAgent).getCurrentPosition(), map, agents, time, myAgent.getLocalName()),
 							map, agents, time, myAgent.getLocalName())) {
 				reached = true;
+			}
+			break;
+
+		case getTreasure:
+			if (((CustomAgent) myAgent).type == EntityType.AGENT_TANKER) {
+				if (((abstractAgent) myAgent).getBackPackFreeSpace() == 0) {
+					reached = true;
+				}
+			}
+			else {
+				String treasure = agents.get(myAgent.getLocalName()).currentTreasure;
+				TreasureInfo ti = ((CustomAgent) myAgent).treasures.get(treasure);
+				if (ti == null) {
+					reached = true;
+				} else {
+					String posCollector = agents.get(ti.collectorAgent).position;
+					if (treasure.equals(posCollector) && map.get(treasure).connectedNodes.contains(((mas.abstractAgent) this.myAgent).getCurrentPosition())) {
+						reached = true;
+					}
+				}
 			}
 			break;
 

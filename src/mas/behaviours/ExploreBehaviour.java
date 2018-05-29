@@ -86,16 +86,27 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			map.put(lobs.get(0).getLeft(),new NodeInfo(lobs.get(0).getRight(), lobs.get(0).getLeft(), connected) );
 
 			// change behaviour to GetTreasureBehaviour
-			if (agInfo.type == EntityType.AGENT_COLLECTOR) {
+			if (agInfo.type == EntityType.AGENT_COLLECTOR && agInfo.reference != null) {
+
+				if (agInfo.freeSpace < agInfo.maxSpace) {
+					agInfo.goal = GoalType.giveTreasure;
+					agInfo.update();
+					agents.put(myAgentName, agInfo);
+					move.stop();
+					myAgent.addBehaviour(new GetTreasureBehaviour((abstractAgent) myAgent));
+					this.stop();
+					return;
+				}
 
 				// check if treasure is not assigned
 				for (Map.Entry<String, TreasureInfo> entry : treasures.entrySet()) {
 					String key = entry.getKey();
 					TreasureInfo value = entry.getValue();
 					// treasure is not assigned
-					if (value.collectorAgent == null && ((abstractAgent) myAgent).getMyTreasureType().equals(value.type.getName())) {
+					if (value.amount > 0 && value.collectorAgent == null && ((abstractAgent) myAgent).getMyTreasureType().equals(value.type.getName())) {
 						System.out.println("Assigned node " + key + " " + value.type + " to " + myAgentName);
 						// treasures.get(key).collectorAgent = myAgentName;
+						agInfo.goal = GoalType.getTreasure;
 						agInfo.update();
 						agents.put(myAgentName, agInfo);
 						move.stop();
@@ -131,15 +142,17 @@ public class ExploreBehaviour extends SimpleBehaviour {
 					// go to tanker
 					agInfo.goal = GoalType.shareInformation;
 
+					String dest = "";
 					try {
-						agInfo.path = MapUtils.getPath(myPosition, agInfo.reference, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime, myAgentName);
+						dest = map.get(agInfo.reference).connectedNodes.get(0);
+						agInfo.path = MapUtils.getPath(myPosition, dest, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime, myAgentName);
 					} catch (PathBlockedException e) {
 
 						agInfo.stuckCounter = 3;
 						agInfo.update();
 						agents.put(myAgentName, agInfo);
 						move.stop();
-						myAgent.addBehaviour(new UnstuckBehaviour(myAgent, agInfo.goal, agInfo.reference));
+						myAgent.addBehaviour(new UnstuckBehaviour(myAgent, agInfo.goal, dest));
 						this.stop();
 						return;
 					} catch (Exception e) {
@@ -168,19 +181,21 @@ public class ExploreBehaviour extends SimpleBehaviour {
 					if (agInfo.goal == GoalType.explore) {
 						// System.out.println(myAgentName + " : map exploration is over (" + map.size() + " nodes). Switching to another behaviour.");
 						try {
-							agInfo.path = MapUtils.getOldestNodePath(myPosition, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime,
+							dest = MapUtils.getOldestNode(myPosition, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime,
 									myAgentName);
+							agInfo.path = MapUtils.getPath(myPosition,dest, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime,
+									myAgentName);
+						}
+						catch (PathBlockedException ex) {
 
-							if (agInfo.path == null) {
-								System.out.println(myAgentName + " : path is blocked.");
-								agInfo.stuckCounter = 3;
-								agInfo.update();
-								agents.put(myAgentName, agInfo);
-								move.stop();
-								myAgent.addBehaviour(new UnstuckBehaviour(myAgent, agInfo.goal, dest));
-								this.stop();
-								return;
-							}
+							agInfo.stuckCounter = 3;
+							agInfo.update();
+							agents.put(myAgentName, agInfo);
+							move.stop();
+							myAgent.addBehaviour(new UnstuckBehaviour(myAgent, agInfo.goal, dest));
+							this.stop();
+							return;
+
 						} catch (Exception ex) {
 							ex.printStackTrace();
 						}
