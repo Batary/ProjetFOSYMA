@@ -23,7 +23,7 @@ public class ExploreBehaviourCopy extends TickerBehaviour{
 	private String myAgentName;
 	private AgentInfo agInfo;
 
-
+	@Deprecated
 	public ExploreBehaviourCopy (final mas.abstractAgent myagent) {
 		super(myagent, ((CustomAgent)(myagent)).agentBlockingTime);
 	}
@@ -147,10 +147,6 @@ public class ExploreBehaviourCopy extends TickerBehaviour{
 				}
 			}
 
-
-
-			// TODO add reporterBehaviour to passively update map ?
-
 			agInfo.goal = GoalType.explore;
 
 			String destination = "", dest = "";
@@ -168,12 +164,9 @@ public class ExploreBehaviourCopy extends TickerBehaviour{
 				} 
 				catch (NoUnvisitedNodeException e) {
 					System.out.println(myAgentName + " : map exploration is over (" + map.size() + " nodes). Switching to another behaviour.");
-					//this.myAgent.addBehaviour(new RandomWalkBehaviour((abstractAgent) this.myAgent));
 
-					//TODO change behaviour here --> go back to transmit data
+					// go back to transmit data
 					agents.get(myAgent.getLocalName()).goal = GoalType.shareInformation;
-					// test
-					// myAgent.addBehaviour(new UnstuckBehaviour(myAgent, GoalType.explore, agInfo.path.get(agInfo.path.size() - 1)));
 					this.stop();
 					return;
 				}
@@ -211,14 +204,14 @@ public class ExploreBehaviourCopy extends TickerBehaviour{
 				NodeInfo n = map.get(lobs.get(0).getLeft());
 				for (Couple<String, List<Attribute>> c : lobs) {
 					if (map.get(c.getLeft()).lastUpdate <= n.lastUpdate) {
-//						System.out.println(myAgentName + " : " + c.getLeft() + " : " + map.get(c.getLeft()).lastUpdate + " " + n.position + " : " + n.lastUpdate);
+			//						System.out.println(myAgentName + " : " + c.getLeft() + " : " + map.get(c.getLeft()).lastUpdate + " " + n.position + " : " + n.lastUpdate);
 						n = map.get(c.getLeft());
-//						System.out.println(myAgentName + " : " + "n = " + n.position);
+			//						System.out.println(myAgentName + " : " + "n = " + n.position);
 					}
 				}
 				l2.add(n.position);
 			}
-//			System.out.println(myAgentName + " : " + "l2 = " + Arrays.toString(l2.toArray()));
+			//			System.out.println(myAgentName + " : " + "l2 = " + Arrays.toString(l2.toArray()));
 
 			//test if not following another agent
 			for (Map.Entry<String, AgentInfo> entry : agents.entrySet()) {
@@ -227,9 +220,9 @@ public class ExploreBehaviourCopy extends TickerBehaviour{
 			    if(key.equals(myAgentName))continue;
 			    if(value.position.equals(myPosition))
 			    	System.out.println(myAgentName + " following " + key +  " : " + (value.lastUpdate - System.currentTimeMillis()) + " " + l2 + " " + value.position);
-			    //TODO
+
 				if( value.lastUpdate > System.currentTimeMillis() - 2500 && (value.position.equals(myPosition) || l2.contains(value.position))) {
-//					l2.remove(value.position);
+			//					l2.remove(value.position);
 					l2.clear();
 					for (Couple<String, List<Attribute>> c : lobs) {
 						if(!value.position.equals(c)) {

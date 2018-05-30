@@ -6,7 +6,7 @@ treasure:66:46
 treasure:112:150
 diamonds:14:24
 diamonds:19:41
-wumpus:Golem:98:200:0
+wumpus:Golem:98:200:-1
 agentExplo:Lara:77:-1:-1
 agentExplo:Indiana:83:-1:-1
 agentCollect:Diams:5:-1:18

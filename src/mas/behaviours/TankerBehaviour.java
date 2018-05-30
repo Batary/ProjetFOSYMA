@@ -82,7 +82,8 @@ public class TankerBehaviour extends SimpleBehaviour {
 				}
 				// assumes wumpus has not moved a treasure and we do not know about it
 				if (finished) {
-					System.err.println("Map is completely explored and all treasures have been gathered !\n\nStopping platform...\n");
+					System.err.println(
+							"Map is completely explored and all treasures have been gathered !\n(see TankerBehaviour to disable this)\n\nStopping platform...\n");
 
 					Codec codec = new SLCodec();
 					Ontology jmo = JADEManagementOntology.getInstance();

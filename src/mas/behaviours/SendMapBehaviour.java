@@ -67,9 +67,9 @@ public class SendMapBehaviour extends TickerBehaviour{
 					msg.setSender(this.myAgent.getAID());
 					for (DFAgentDescription n:result) {
 						if(! n.getName().getName().equals(this.myAgent.getName())) {
-							//TODO test if agent has not recently received message instead of random periodic send
 							msg.addReceiver(new AID(n.getName().getLocalName(), AID.ISLOCALNAME));
-							//							System.out.println(this.myAgent.getLocalName()+" : sending map to : " + n.getName().getLocalName() + " (map size : " + map.size() + ")");
+							// System.out.println(this.myAgent.getLocalName()+" : sending map to : " + n.getName().getLocalName() + " (map size : " +
+							// map.size() + ")");
 						}
 					}
 

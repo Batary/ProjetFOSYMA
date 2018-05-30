@@ -19,17 +19,18 @@ import mas.utils.MapUtils;
 import mas.utils.NodeInfo;
 import mas.utils.TreasureInfo;
 
-/**This behaviour is used for any agent which is stuck. <br>
- * This will not be used in simple situations, as a priority order should handle it. <br><br>
- * Stategy :<br> - send broadcast messages to warn other agents that this one is stuck <br>
+/** This behaviour is used for any agent which is stuck. <br>
+ * This will not be used in simple situations, as a priority order should handle it. <br>
+ * <br>
+ * Stategy :<br>
+ * - send broadcast messages to warn other agents that this one is stuck <br>
  * - try again once or twice reaching goal <br>
- * - try to send a MOVEOUT signal to nearby agents and wait, they will relay the MOVEOUT signal and activate this behaviour <br>
+ * - try to send a MOVEOUT signal to nearby agents and wait, they will relay the MOVEOUT signal and activate this behaviour --> removed <br>
  * - if it did not solve the problem, try to reach a highly-connected, low-crowded node <br>
- * - if this fails : try to move the other way, if there is a highly-connected node on opposite direction <br> 
+ * - if this fails : try to move the other way, if there is a highly-connected node on opposite direction <br>
  * - if agent is still blocked, move randomly until situation gets better (last resort) <br>
  * - make sure agent is no longer stuck (check at every step) <br>
- * - once agent is not stuck anymore, release the caller behaviour
- * */
+ * - once agent is not stuck anymore, release the caller behaviour */
 public class UnstuckBehaviour extends TickerBehaviour {
 
 	private static final long serialVersionUID = -3029763588541389794L;
@@ -124,7 +125,6 @@ public class UnstuckBehaviour extends TickerBehaviour {
 					dest = agInfo.path.get(0);
 				}
 				else {
-					// TODO test free node ?
 					agInfo.path = new ArrayList<>();
 					agInfo.path.add(dest);
 				}
@@ -158,8 +158,6 @@ public class UnstuckBehaviour extends TickerBehaviour {
 		agInfo.update();
 		((CustomAgent) myAgent).agents.put(myAgentName, agInfo);
 	}
-	// TODO add MOVEOUT behaviour
-	// TODO try to get path to free node ?
 
 	private void switchBehaviour() {
 		switch (previousGoal) {

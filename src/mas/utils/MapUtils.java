@@ -64,13 +64,13 @@ public class MapUtils {
 
 	/** Gets a valid path to target, trying to include nearby agents.
 	 * 
-	 * @param start
-	 *            the current node of the agent
-	 * @param map
-	 *            the current map of this agent
+	 * @param start the current node of the agent
+	 * @param map the current map of this agent
+	 * @param time the time step
+	 * @param caller the name of caller agent
 	 * @return path to target, and null if path is blocked
 	 * @throws Exception
-	 *             if start is not in map or path is completely blocked --> unstuck behaviour */
+	 *             if start is not in map, or path is completely blocked --> unstuck behaviour */
 	public static List<String> getPath(String start, String dest, HashMap<String, NodeInfo> map, HashMap<String, AgentInfo> agents, int time,
 			String caller) throws Exception {
 
@@ -125,8 +125,7 @@ public class MapUtils {
 				}
 			}
 			if (blocked) {
-				// try to get by, by waiting a little
-				// TODO if not on startnode ?
+				// try to get by, by waiting a little (removed due to path transgression)
 				// nodesToVisit.get(currentNode.position).distance += 1;
 			}
 
@@ -461,8 +460,6 @@ public class MapUtils {
 
 		nodesToVisit.put(start, currentNode);
 		nodesToVisitNames.add(start);
-
-		// TODO select node with shortest path to destination if not null ?
 
 		boolean found = false;
 		while (!nodesToVisit.isEmpty() && !found) {
