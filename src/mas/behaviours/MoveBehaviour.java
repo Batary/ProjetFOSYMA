@@ -123,7 +123,7 @@ public class MoveBehaviour extends TickerBehaviour {
 			}
 
 			if (((mas.abstractAgent) this.myAgent).getBackPackFreeSpace() < agInfo.maxSpace && agInfo.type == EntityType.AGENT_COLLECTOR
-					&& ((mas.abstractAgent) this.myAgent).emptyMyBackPack("AgentTanker1")) {
+					&& ((mas.abstractAgent) this.myAgent).emptyMyBackPack(CustomAgent.tankerAgent)) {
 				System.out.println(myAgentName + " : given backpack content to tanker.");
 				awakeParent();
 			}

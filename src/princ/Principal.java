@@ -34,7 +34,8 @@ public class Principal {
 		// env = new Environment(ENVtype.GRID_T, 5, null);
 		// env = new Environment(ENVtype.DOROGOVTSEV_T, 25, null);
 		// env = new Environment("ressources/test", "ressources/test-config");
-		env = new Environment("ressources/map2017-2", "ressources/map2017-config");
+		// env = new Environment("ressources/map2017-2", "ressources/map2017-config");
+		env = new Environment("ressources/map2018", "ressources/map2018-multiType-exam");
 
 		// 1), create the platform (Main container (DF+AMS) + containers + monitoring agents : RMA and SNIFFER)
 		rt = emptyPlatform(containerList);
@@ -159,26 +160,32 @@ public class Principal {
 		 * Local and no GateKeeper
 		 */
 
-		//	wumpus on container0
+		// wumpus on container0
 		c = containerList.get("container0");
-		agentName="Golem";
+		agentName = "Golem";
 		try {
-			Object[] objtab=new Object[]{env};//used to give informations to the agent
-			AgentController	ag=c.createNewAgent(agentName,DummyWumpusShift.class.getName(),objtab);
+			Object[] objtab = new Object[] { env };// used to give informations to the agent
+			AgentController ag = c.createNewAgent(agentName, DummyWumpusShift.class.getName(), objtab);
 			agentList.add(ag);
-			System.out.println(agentName+" launched");
+			System.out.println(agentName + " launched");
 		} catch (StaleProxyException e) {
 			e.printStackTrace();
 		}
 
+		// c = containerList.get("container0");
 
-		// Explorer (no backpack)
-		c = containerList.get("container0");
+		/*
+		agentExplo:Explo1:62:-1:-1
+		agentExplo:Explo2:63:-1:-1
+		agentExplo:Explo3:96:-1:-1
+		agentCollect:colT1:23:32:-1
+		agentCollect:colT2:37:25:-1
+		agentCollect:colT3:74:50:-1
+		agentCollect:colD1:79:-1:50
+		agentTanker:Tank:38:350:350
+		 */
 
-		//agentExplo:AgentExplorer1:2:-1:-1
-		//agentExplo:AgentExplorer2:3:-1:-1
-		//agentExplo:AgentExplorer3:4:-1:-1
-		agentName = "Indiana";
+		agentName = "Explo1";
 		try {
 
 			Object[] objtab = new Object[] { env, EntityType.AGENT_EXPLORER };// used to give informations to the agent
@@ -189,7 +196,7 @@ public class Principal {
 			e.printStackTrace();
 		}
 
-		agentName = "Lara";
+		agentName = "Explo2";
 		try {
 
 			Object[] objtab = new Object[] { env, EntityType.AGENT_EXPLORER };// used to give informations to the agent
@@ -200,7 +207,18 @@ public class Principal {
 			e.printStackTrace();
 		}
 
-		agentName = "Diams";
+		agentName = "Explo3";
+		try {
+
+			Object[] objtab = new Object[] { env, EntityType.AGENT_EXPLORER };// used to give informations to the agent
+			AgentController ag = c.createNewAgent(agentName, ExplorerAgent.class.getName(), objtab);
+			agentList.add(ag);
+			System.out.println(agentName + " launched");
+		} catch (StaleProxyException e) {
+			e.printStackTrace();
+		}
+
+		agentName = "colT1";
 		try {
 
 			Object[] objtab = new Object[] { env, EntityType.AGENT_COLLECTOR };// used to give informations to the agent
@@ -211,7 +229,7 @@ public class Principal {
 			e.printStackTrace();
 		}
 
-		agentName = "Picsou";
+		agentName = "colT2";
 		try {
 
 			Object[] objtab = new Object[] { env, EntityType.AGENT_COLLECTOR };// used to give informations to the agent
@@ -222,7 +240,29 @@ public class Principal {
 			e.printStackTrace();
 		}
 
-		agentName = "AgentTanker1";
+		agentName = "colT3";
+		try {
+
+			Object[] objtab = new Object[] { env, EntityType.AGENT_COLLECTOR };// used to give informations to the agent
+			AgentController ag = c.createNewAgent(agentName, CollectorAgent.class.getName(), objtab);
+			agentList.add(ag);
+			System.out.println(agentName + " launched");
+		} catch (StaleProxyException e) {
+			e.printStackTrace();
+		}
+
+		agentName = "colD1";
+		try {
+
+			Object[] objtab = new Object[] { env, EntityType.AGENT_COLLECTOR };// used to give informations to the agent
+			AgentController ag = c.createNewAgent(agentName, CollectorAgent.class.getName(), objtab);
+			agentList.add(ag);
+			System.out.println(agentName + " launched");
+		} catch (StaleProxyException e) {
+			e.printStackTrace();
+		}
+
+		agentName = "Tank";
 		try {
 
 			Object[] objtab = new Object[] { env, EntityType.AGENT_TANKER };// used to give informations to the agent
@@ -319,6 +359,12 @@ public class Principal {
 
 		}
 		System.out.println("Agents started...");
+		try {
+			Thread.sleep(3000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }

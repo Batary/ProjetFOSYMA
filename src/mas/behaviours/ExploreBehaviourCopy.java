@@ -142,7 +142,7 @@ public class ExploreBehaviourCopy extends TickerBehaviour{
 
 					System.out.println("My current backpack capacity is:"+ ((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
 					System.out.println("The agent tries to transfer is load into the Silo (if reachable); succes ? : "
-							+ ((mas.abstractAgent) this.myAgent).emptyMyBackPack("AgentTanker1"));
+							+ ((mas.abstractAgent) this.myAgent).emptyMyBackPack(CustomAgent.tankerAgent));
 					System.out.println("My current backpack capacity is:"+ ((mas.abstractAgent)this.myAgent).getBackPackFreeSpace());
 				}
 			}

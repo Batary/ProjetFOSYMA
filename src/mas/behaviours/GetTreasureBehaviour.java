@@ -44,7 +44,7 @@ public class GetTreasureBehaviour extends SimpleBehaviour {
 		HashMap<String, AgentInfo> agents = ((CustomAgent) this.myAgent).agents;
 		HashMap<String, NodeInfo> map = ((CustomAgent) (this.myAgent)).map;
 		HashMap<String, TreasureInfo> treasures = ((CustomAgent) this.myAgent).treasures;
-		AgentInfo tanker = agents.get("AgentTanker1");
+		AgentInfo tanker = agents.get(CustomAgent.tankerAgent);
 
 		if (myPosition != "") {
 
@@ -114,7 +114,8 @@ public class GetTreasureBehaviour extends SimpleBehaviour {
 				if (agInfo.freeSpace == agInfo.maxSpace) {
 
 					// call tanker if treasure is more than two trips remaining
-					if (myTreasure != null && tanker != null && System.currentTimeMillis() - lastMessage > ((CustomAgent) myAgent).agentBlockingTime
+					if (myTreasure != null && tanker != null && (tanker.currentTreasure == null || !tanker.currentTreasure.equals(myTreasure))
+							&& System.currentTimeMillis() - lastMessage > ((CustomAgent) myAgent).agentBlockingTime
 							&& (treasures.get(myTreasure).amount - agInfo.maxSpace) * 0.66 > 0) {
 						lastMessage = System.currentTimeMillis();
 						final ACLMessage msg1 = new ACLMessage(ACLMessage.PROPOSE);
@@ -148,12 +149,31 @@ public class GetTreasureBehaviour extends SimpleBehaviour {
 
 			if (agInfo.freeSpace < agInfo.maxSpace) {
 				agInfo.goal = GoalType.giveTreasure;
-				if (tanker != null && myTreasure != null && myTreasure.equals(myPosition)
-						&& tanker.currentTreasure != null && tanker.currentTreasure.equals(myTreasure)) {
-					// wait
-					block();
+				if (tanker != null && myTreasure != null && tanker.currentTreasure != null && tanker.currentTreasure.equals(myTreasure)) {
+					if (myTreasure.equals(myPosition)) {
+						// wait
+						block();
+					}
+					else {
+						// go to treasure
+						try {
+							agInfo.path = MapUtils.getPath(myPosition, myTreasure, map, agents, ((CustomAgent) this.myAgent).agentBlockingTime,
+									myAgentName);
+						} catch (PathBlockedException e) {
+							System.out.println(myAgentName + " : path is blocked");
+							agInfo.stuckCounter = 3;
+							agInfo.update();
+							agents.put(myAgentName, agInfo);
+							move.stop();
+							myAgent.addBehaviour(new UnstuckBehaviour(myAgent, agInfo.goal, myTreasure));
+							this.stop();
+							return;
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
 				} else {
-					// go to tanker
+					// go to tanker to empty backpack
 					// TODO go to real tanker position if known
 					if (agInfo.reference != null) {
 
@@ -166,7 +186,7 @@ public class GetTreasureBehaviour extends SimpleBehaviour {
 							agInfo.update();
 							agents.put(myAgentName, agInfo);
 							move.stop();
-							myAgent.addBehaviour(new UnstuckBehaviour(myAgent, agInfo.goal, myTreasure));
+							myAgent.addBehaviour(new UnstuckBehaviour(myAgent, agInfo.goal, agInfo.reference));
 							this.stop();
 							return;
 						} catch (Exception e) {

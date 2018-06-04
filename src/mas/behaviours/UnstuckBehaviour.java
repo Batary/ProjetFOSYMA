@@ -82,7 +82,7 @@ public class UnstuckBehaviour extends TickerBehaviour {
 
 		map.put(lobs.get(0).getLeft(), new NodeInfo(lobs.get(0).getRight(), lobs.get(0).getLeft(), connected));
 
-		if (agInfo.type == EntityType.AGENT_COLLECTOR && ((mas.abstractAgent) this.myAgent).emptyMyBackPack("AgentTanker1")) {
+		if (agInfo.type == EntityType.AGENT_COLLECTOR && ((mas.abstractAgent) this.myAgent).emptyMyBackPack(CustomAgent.tankerAgent)) {
 			if (((mas.abstractAgent) this.myAgent).getBackPackFreeSpace() < agInfo.maxSpace)
 			{
 				System.out.println(myAgentName + " : given backpack content to tanker.");
@@ -115,7 +115,7 @@ public class UnstuckBehaviour extends TickerBehaviour {
 			agInfo.path.add(dest);
 
 			// try to reach unused node
-			if ((agInfo.stuckCounter <= 5 && tick < 10) || tick % checkCounter / 1.5 == 0) {
+			if ((agInfo.stuckCounter <= 5 && tick < 10) || tick % (int) (checkCounter / 1.5) < 3) {
 
 				agInfo.path = MapUtils.getFreeNodePath(myPosition, map, agents, time, myAgentName);
 				if (agInfo.path == null) {
@@ -187,7 +187,7 @@ public class UnstuckBehaviour extends TickerBehaviour {
 
 	private boolean checkGoal(HashMap<String, NodeInfo> map, HashMap<String, AgentInfo> agents, int time) {
 		boolean reached = tick > 100;
-		AgentInfo tanker = agents.get("AgentTanker1");
+		AgentInfo tanker = agents.get(CustomAgent.tankerAgent);
 		switch (previousGoal) {
 		case explore:
 			if (target != null && map.containsKey(target) && map.get(target).lastUpdate > 0) {

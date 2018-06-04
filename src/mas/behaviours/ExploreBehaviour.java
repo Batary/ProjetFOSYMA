@@ -124,7 +124,7 @@ public class ExploreBehaviour extends SimpleBehaviour {
 			if (move.newTreasure || agInfo.goal == GoalType.shareInformation) {
 
 				// check if tanker is up to date
-				AgentInfo tanker = agents.get("AgentTanker1");
+				AgentInfo tanker = agents.get(CustomAgent.tankerAgent);
 				if (tanker != null && tanker.lastUpdate > System.currentTimeMillis() - 2 * ((CustomAgent) myAgent).agentBlockingTime) {
 					// tanker is nearby and (probably) up to date
 					// String dest = "";
